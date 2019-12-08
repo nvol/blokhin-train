@@ -12,26 +12,6 @@ def sign(A, B):
     return abs(A)
 
 
-# def inp(prompt, val_type=None, limits=None):
-#     entered_value = None
-#     while True:
-#         entered_value = input(prompt)
-#         try:
-#             if val_type == 'int':
-#                 entered_value = int(entered_value)
-#             else:
-#                 entered_value = float(entered_value)
-#             if limits is not None and not (limits[0] <= entered_value <= limits[1]):
-#                 print(
-#                     'Введено недопустимое значение, введите число в пределах от %s до %s' %
-#                     (str(limits[0]), str(limits[1])))
-#                 continue
-#             break
-#         except Exception as e:
-#             print('Простите, непонятно (%s), давайте ещё раз попробуем.' % str(e))
-#             continue
-#     return entered_value
-
 '''
 [__6____] - [__5___] - [__4___] - [__3___] - [__2___] - [__1___],
 '''
@@ -1079,8 +1059,6 @@ class Train:
                 if cls.V1M(I) <= cls.A2(I+1):
                     # label 28
                     cls.V1M.set_elem(I, cls.A2(I+1))
-
-                pass
             else:
                 # label 25
                 if cls.V10(I) >= cls.A2(I+1):
@@ -1094,7 +1072,17 @@ class Train:
         if cls.SO2 > Y2:
             cls.SO2 = Y2
             cls.NL18 = NL16
-
+        # label 15
+        if cls.T <= cls.TPSM:
+            return
+        
+        cls.SMAX1 = cls.SMAX2
+        cls.SO1 = cls.SO2
+        cls.NL10 = cls.NL17
+        cls.NL13 = cls.NL18
+        cls.SMAX2 = 0.0
+        cls.SO2 = 0.0
+        cls.TPSM = cls.T + cls.HPSM
 
     @classmethod
     def are_limits_reached(cls):
@@ -1180,9 +1168,9 @@ if __name__ == '__main__':
 
     while True:
         Train.INTEGR()
-        # Train.MAX() # TODO
+        Train.MAX()
         if Train.T >= Train.TP:
-            # Train.PRINTR() # TODO: PRINTR
+            # Train.PRINTR1() # TODO: PRINTR1
             pass
         if Train.are_limits_reached():
             break
