@@ -213,12 +213,11 @@ class Train:
         cls.inp('N0',
             'Введите число масс в полной системе (N0): ',
             'int',
-            (1, 1000)) # print('cls.N0:', cls.N0)
+            (1, 1000))
 
-        ###@@@!!!@@@### do not use shortened system => cls.N = cls.N0, cls.NC1 = 1
-        cls.N = cls.N0 ###@@@ TODO: ATTENTION: не укорачиваем систему!
+        cls.N = cls.N0 ### не укорачиваем систему! => cls.N = cls.N0, cls.NC1 = 1 ###
 
-        ###@@@
+        ###
         # cls.inp('N',
         #     'Введите число масс в укороченной системе (число групп) (N): ',
         #     'int',
@@ -226,6 +225,8 @@ class Train:
         # if (cls.N0 % cls.N) != 0:
         #     print('Ошибка: N0 не делится без остатка на N')
         #     exit(0)
+        ###
+
         cls.NC1 = cls.N0 // cls.N
 
         print('Введите массы экипажей для полной системы (M0):')
@@ -243,7 +244,7 @@ class Train:
     def VVONU1(cls):
         print('Формирование Q(I):')
         cls.Q = cls.FORMI()
-        ### cls.MINPOR(cls.Q) ###@@@ TODO: MINPOR!
+        ### cls.MINPOR(cls.Q) ###
 
         print('Формирование V(I):')
         cls.V = cls.FORMI()
@@ -375,28 +376,19 @@ class Train:
     @classmethod
     def FORMI(cls):
         RES = Arr()
-        ###@@@ NUP = Arr(20, 0)
-        ###@@@ TABL = Arr(20, 0.0)
-        NUP, TABL = Arr(), Arr() ###@@@
-        rest = cls.N0 ###@@@
-        I = 0 ###@@@
-        while True: ###@@@ for I in range(1, 20+1):
+        NUP, TABL = Arr(), Arr()
+        rest = cls.N0
+        I = 0
+        while True:
             I += 1
             cls.inp('tmp_NUP', 'NUP(%s): ' % str(I), 'int', (1, rest))
             NUP.set_elem(I, cls.tmp_NUP)
-            rest -= NUP(I) ###@@@
-            if rest == 0: ###@@@
-                break ###@@@
-        IK = int(sum([i for i in NUP])) ###@@@
+            rest -= NUP(I)
+            if rest == 0:
+                break
+        IK = int(sum([i for i in NUP]))
         NK = len(NUP)
         print('NK:', NK)
-        ###@@@ IK, NK = 0, 0
-        ###@@@
-        # for I in range(1, 20+1):
-        #     if NUP(I) == 0:
-        #         break
-        #     IK += NUP(I)
-        #     NK += 1
         assert(IK == cls.N0)
         print('NUP:', NUP) ### TODO: TODEL
         for I in range(1, NK+1):
@@ -409,7 +401,7 @@ class Train:
             ret += [TABL(ix) for _ in range(n)]
         return Arr(lst=ret)
 
-        ###@@@
+        ###
         # L = 1
         # for I in range(1, NK+1):
         #     while True:
@@ -423,6 +415,7 @@ class Train:
         #     if L > cls.N0:
         #         break
         # return RES
+        ###
 
     # @classmethod
     # def MINPOR(cls, TBL_IN):
@@ -477,10 +470,10 @@ class Train:
                                 else:
                                     cls.S.set_elem(I, Y3)
                                     cls.AP.set_elem(I, Y3 - cls.KK(I) * X)
-                            else: #lbl 13
+                            else: # label 13
                                 cls.S.set_elem(I, Y1)
                                 cls.AH.set_elem(I, Y1 - cls.KK(I) * X)
-                        else: #lbl 13 again
+                        else: # label 13 again
                             cls.S.set_elem(I, Y1)
                             cls.AH.set_elem(I, Y1 - cls.KK(I) * X)
                 else:
@@ -512,8 +505,7 @@ class Train:
         
         if cls.NC1 != 1:
             for I in range(1, cls.N0+1):
-                # TODO: shorten system ###@@@!!!@@@###
-                pass ###@@@ ... = MINPOR()
+                pass ### ... = MINPOR() ###
 
         for I in range(1, 100+1):
             cls.IA.set_elem(I, 0.0)
@@ -544,7 +536,7 @@ class Train:
             cls.W.set_elem(I, abs(cls.W(I)) * D)
             cls.FB.set_elem(I, cls.FP(I) + cls.F(I) + cls.FT(I) + cls.W(I))
         if cls.NC1 != 1:
-            pass # cls.FB = cls.MINPOR(cls.FB) # TODO: пока не укорачиваем ничего!
+            pass ### cls.FB = cls.MINPOR(cls.FB) ###
 
     @classmethod
     def VNESH4(cls): # VNESH4 version (calls TORM1)
@@ -718,14 +710,14 @@ class Train:
             while True: # lbl 701
                 I += 1
                 J1 = cls.ITAU(I)
-                J2 = int(cls.ITAU(I+1)) ###@@@ maybe 0.0
+                J2 = int(cls.ITAU(I+1)) # TODO: maybe 0.0
                 print('I:', I, 'J1:', J1, 'J2:', J2)
                 print('cls.ITAU:', cls.ITAU)
                 for K1 in range(J1, J2+1):
                     tmp = ( cls.YTAU((I+1, J)) - cls.YTAU((I, J)) ) / (J2 - J1) \
                         * (K1 - J1) + cls.YTAU((I, J))
                     TAUOB.set_elem((K1,J), tmp)
-                if I >= NTAU1: ###@@@
+                if I >= NTAU1: # TODO: NTAU1 cases
                     break
                 # if I < NTAU1:
                 #     continue
@@ -875,14 +867,14 @@ class Train:
             Y = cls.XO(I)
             if Y > 0: # else goto 4
                 Y2 = Y
-                for L in range(cls.IND, cls.P3+1, 2): #@@@ TODO: DO 3 L=IND,P3,2
+                for L in range(cls.IND, cls.P3+1, 2): # TODO: DO 3 L=IND,P3,2
                     skip_label_4 = False # to make GOTO 11
                     Y1 = Y - cls.A(L)
                     if Y1 >= 0: # else goto 5
                         Y2 = Y - cls.A(L+1)
                         if Y2 > 0:
                             continue
-                        J = (L+1)//2 + 1 #@@@ int()? floor? round?
+                        J = (L+1)//2 + 1 # TODO: int()? floor? round?
                         cls.FP.set_elem(
                             I,
                             cls.DI(J) * cls.PM0(I),
@@ -892,9 +884,9 @@ class Train:
                             skip_label_4 = True
                             break
                         cls.IND = L
-                        pass #@@@ goto 11
+                        pass # TODO: goto 11
                     # label 5:
-                    J = (L+1)//2 #@@@ int()?
+                    J = (L+1)//2 # TODO: int()?
                     cls.FP.set_elem(
                         I,
                         (cls.DI(J) + Y2/cls.R(J)) * cls.PM0(I),
@@ -964,15 +956,11 @@ class Train:
             cls.A.set_elem(L+1, cls.LP(K))
             L += 2
         print('R:', cls.R)
-        # for I in range(1, cls.P+1):
-        #     print('  [%s] %s' % (I, cls.R(I)))
         P2 = cls.P + cls.P
         P3 = P2 - 1
         for L in range(2, P2+1):
             cls.A.set_elem(L, cls.A(L) + cls.A(L-1))
         print('A:', cls.A)
-        # for I in range(1, P2+1):
-        #     print('  [%s] %s' % (I, cls.A(I)))
         for I in range(1, cls.N0+1):
             cls.PM0.set_elem(I, cls.M0(I) * const.g)
         cls.IND = 1
@@ -980,8 +968,6 @@ class Train:
 
     @classmethod
     def PARPRI(cls):
-        ### TODO: very very strange - a lot of new vars...
-
         cls.inp('HP', 'Введите HP: ', 'float', (1e-9, 1e+9))
         cls.inp('HPM', 'Введите HPM: ', 'float', (1e-9, 1e+9))
         cls.inp('HPSM', 'Введите HPSM: ', 'float', (1e-9, 1e+9))
@@ -1094,63 +1080,6 @@ class Train:
 
 if __name__ == '__main__':
 
-    # Z = Arr()
-    # for i in range(1, 10+1):
-    #     Z.set_elem(i, i**2)
-    
-    # print("Z:", Z)
-
-    # Train.N = len(Z)
-    # Train.NC1 = 1
-
-    # print("Train.NC1:", Train.NC1)
-    # Z = Train.MINPOR(Z)
-
-    # print("Z (after MINPOR):", Z)
-
-    # exit(1)
-
-
-    # a = Arr()
-    # a.set_elem(1, 10)
-    # a.set_elem(3, 30)
-    # print(a)
-    # for val in a:
-    #     print('>', val)
-    # exit(0)
-
-    # plt.style.use('fivethirtyeight')
-    # plt.plot([1,2,3,4], [10,5,3,2], 'g', label='hop-hop')
-    # plt.legend()
-    # plt.show()
-    # exit(0)
-
-
-    '''
-    def Euler(n = 1000, h = 0.001, x = 0, y = 0):
-        for i in range(n):
-            y += h * function(x, y)
-            x += h
-        return x, y
-    def function(x, y):
-        return x/(y+1) + y/(x+1) # 6 * x**2 + 5 * x * y # функция первой производной
-    xx, yy = list(), list()
-    x, y = 0, 0
-    xx.append(x)
-    yy.append(y)
-    for _ in range(100):
-        x, y = Euler(x=x, y=y)
-        xx.append(x)
-        yy.append(y)
-    print(xx, yy)
-    plt.style.use('fivethirtyeight')
-    plt.plot(xx, yy, 'r', label='euler')
-    plt.legend()
-    plt.show()
-    exit(0)
-    '''
-
-
     Train.PARVAG1()
     Train.PARS()
     Train.PARG()
@@ -1158,7 +1087,7 @@ if __name__ == '__main__':
     Train.VVONU1()
     Train.PARINT()
 
-    Train.PARPRI() # TODO
+    Train.PARPRI()
 
     #--------------------
 
