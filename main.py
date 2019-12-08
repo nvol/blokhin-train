@@ -1,15 +1,9 @@
+import fortran
 import const
 from init import initial_dataset
 from classes import Arr
 from copy import deepcopy
 # import matplotlib.pyplot as plt
-
-
-def sign(A, B):
-    # returns the value of A with the sign of B
-    if B < 0:
-        return -abs(A)
-    return abs(A)
 
 
 '''
@@ -250,14 +244,14 @@ class Train:
         cls.V = cls.FORMI()
 
         I = 2 # label 10
-        for J in range(1, cls.N+1):
+        for J in fortran.DO(1, cls.N):
             cls.A1.set_elem(I, cls.V(J))
             cls.A2.set_elem(I, 0.0)
             I += 1 # label 11
         
         I = cls.N + 2
         cls.Q.set_elem(1, cls.Q(1) - (cls.LB0(1) - cls.LB(1)) * 0.5)
-        for J in range(1, cls.N+1):
+        for J in fortran.DO(1, cls.N):
             cls.A1.set_elem(I, cls.Q(J))
             I += 1 # label 12
         
@@ -269,14 +263,14 @@ class Train:
     def SPRAV1(cls):
         cls.T = cls.A1(1)
 
-        for I in range(1, cls.N+1):
+        for I in fortran.DO(1, cls.N):
             cls.V.set_elem(I, cls.A1(I+1))
 
-        for I in range(1, cls.N+1):
+        for I in fortran.DO(1, cls.N):
             L = I + cls.N + 1
             cls.Q.set_elem(I, cls.A1(L))
 
-        for I in range(2, cls.N+1):
+        for I in fortran.DO(2, cls.N):
             L = I + cls.N + 1
             cls.A2.set_elem(L, cls.V(I-1)- cls.V(I))
         cls.A2.set_elem(cls.N+2, 0.0 - cls.V(1))
@@ -285,23 +279,23 @@ class Train:
         cls.FVOZM1()
 
         N1 = cls.N - 1
-        for I in range(1, N1+1):
+        for I in fortran.DO(1, N1):
             cls.A2.set_elem(I+1, (cls.S(I) - cls.S(I+1) + cls.FB(I))/cls.M(I))
         cls.A2.set_elem(cls.N+1, (cls.S(cls.N) + cls.FB(cls.N))/cls.M(cls.N))
 
     @classmethod
     def RKUT2(cls):
-        for I in range(1, cls.NU+1):
+        for I in fortran.DO(1, cls.NU):
             cls.A4.set_elem(I, cls.A2(I))
             cls.A5.set_elem(I, cls.A1(I))
             cls.A1.set_elem(I, cls.A1(I) + cls.A2(I) * cls.H1)
         cls.SPRAV1()
-        for I in range(1, cls.NU+1):
+        for I in fortran.DO(1, cls.NU):
             cls.A1.set_elem(I, cls.A5(I) + 2 * cls.H1 * cls.A2(I))
 
     @classmethod
     def INTEGR(cls):
-        for I in range(1, cls.NU+1):
+        for I in fortran.DO(1, cls.NU):
             cls.A6.set_elem(I, cls.A3(I))
             cls.A3.set_elem(I, cls.A1(I))
             cls.A1.set_elem(I, cls.A3(I) + (3.0 * cls.A2(I) - cls.A4(I)) * cls.H1)
@@ -309,25 +303,25 @@ class Train:
             cls.A7.set_elem(I, cls.A4(I))
             cls.A4.set_elem(I, cls.A2(I))
             cls.SPRAV1()
-        for I in range(1, cls.NU+1):
+        for I in fortran.DO(1, cls.NU):
             cls.A1.set_elem(I, cls.A3(I) + (cls.A4(I) + cls.A2(I)) * cls.H1)
         if cls.PVH >= 1:
             ALFA = 0.0
-            for I in range(cls.NP, cls.NP1+1):
+            for I in fortran.DO(cls.NP, cls.NP1):
                 Y1 = abs((cls.A5(I) - cls.A1(I)) / 6.0)
                 if ALFA < Y1:
                     ALFA = Y1
             if ALFA > cls.HGR:
                 if ALFA > cls.VGR:
                     cls.H1 = 0.5 * cls.H
-                    for I in range(1, cls.NU+1):
+                    for I in fortran.DO(1, cls.NU):
                         cls.A1.set_elem(I, cls.A3(I))
                         cls.A2.set_elem(I, cls.A4(I))
                     cls.RKUT2()
             else: # ALFA <= cls.HGR
                 cls.H1 *= 2.0
                 cls.SPRAV1()
-                for I in range(1, cls.NU+1):
+                for I in fortran.DO(1, cls.NU):
                     cls.A3.set_elem(I, cls.A6(I))
                     cls.A4.set_elem(I, cls.A7(I))
                 return
@@ -358,18 +352,18 @@ class Train:
         cls.H1 = 0.5 * cls.H
         cls.NU = 2 * cls.N + 1
         cls.MU = cls.M2 + 1
-        for I in range(2, cls.N+1):
+        for I in fortran.DO(2, cls.N):
             if cls.IA1(I) != 0.0:
                 cls.NU += cls.MU
         if cls.M21 != 0:
-            for I in range(1, cls.N+1):
+            for I in fortran.DO(1, cls.N):
                 if cls.M1 > cls.E:
                     cls.NU += 2
                     if cls.IA11(I) > cls.E:
                         cls.NU += 2
         cls.A1.set_elem(1, 0.0)
         cls.A2.set_elem(1, 1.0)
-        for I in range(1, cls.NU+1):
+        for I in fortran.DO(1, cls.NU):
             cls.A3.set_elem(I, 0.0)
             cls.A4.set_elem(I, 0.0)
 
@@ -391,7 +385,7 @@ class Train:
         print('NK:', NK)
         assert(IK == cls.N0)
         print('NUP:', NUP) ### TODO: TODEL
-        for I in range(1, NK+1):
+        for I in fortran.DO(1, NK):
             cls.inp('tmp_TABL', 'TABL(%s): ' % str(I))
             TABL.set_elem(I, cls.tmp_TABL)
         print('TABL:', TABL) ### TODO: TODEL
@@ -399,11 +393,11 @@ class Train:
         ret = list()
         for ix, n in NUP.enumerate():
             ret += [TABL(ix) for _ in range(n)]
-        return Arr(lst=ret)
+        return Arr(lst=ret) # TODO: is it list to Arr conversion?
 
         ###
         # L = 1
-        # for I in range(1, NK+1):
+        # for I in fortran.DO(1, NK):
         #     while True:
         #         RES.set_elem(L, TABL(I))
         #         L += 1
@@ -425,9 +419,9 @@ class Train:
     #     TBL_OUT = Arr()
     #     N1 = 1
     #     N2 = cls.NC1
-    #     for IK in range(1, cls.N+1):
+    #     for IK in fortran.DO(1, cls.N):
     #         Y1 = 0
-    #         for I in range(N1, N2+1):
+    #         for I in fortran.DO(N1, N2):
     #             Y1 += TBL_IN(I) # label 51
     #         TBL_OUT.set_elem(IK, Y1)
     #         N1 += cls.NC1
@@ -436,7 +430,7 @@ class Train:
     
     @classmethod
     def APPARAT1(cls):
-        for I in range(2, cls.N+1):
+        for I in fortran.DO(2, cls.N):
             L = I + cls.N + 1
             X = None
             if cls.Q(I) < 0:
@@ -504,10 +498,10 @@ class Train:
         cls.DM = cls.FORMI()
         
         if cls.NC1 != 1:
-            for I in range(1, cls.N0+1):
+            for I in fortran.DO(1, cls.N0):
                 pass ### ... = MINPOR() ###
 
-        for I in range(1, 100+1):
+        for I in fortran.DO(1, 100): # TODO: why hardcode?
             cls.IA.set_elem(I, 0.0)
             cls.AH.set_elem(I, 0.0)
             cls.AP.set_elem(I, 0.0)
@@ -517,7 +511,7 @@ class Train:
     def PARG(cls): # AMORTOR4 version
         print('Крепление грузов к вагонам - жёсткое!')
         cls.M21 = 0
-        for I in range(1, cls.N0+1):
+        for I in fortran.DO(1, cls.N0):
             cls.S1.set_elem(I, 0.0)
             cls.M1.set_elem(I, 0.0)
         cls.E = 0.0001
@@ -530,8 +524,8 @@ class Train:
             cls.PROF3() # TODO: будем пока использовать PROF3 (профиль без изгибов), но есть и PROF1
         # label 8
         cls.VNESH4() # call VNESH
-        for I in range(1, cls.N0+1):
-            D = -sign(1.0, cls.V(I))
+        for I in fortran.DO(1, cls.N0):
+            D = -fortran.SIGN(1.0, cls.V(I))
             cls.FT.set_elem(I, cls.FT(I) * D)
             cls.W.set_elem(I, abs(cls.W(I)) * D)
             cls.FB.set_elem(I, cls.FP(I) + cls.F(I) + cls.FT(I) + cls.W(I))
@@ -544,7 +538,7 @@ class Train:
             return
         cls.TORM1()
         if cls.M21 != 0:
-            for I in range(1, cls.N0+1):
+            for I in fortran.DO(1, cls.N0):
                 if cls.M1 < cls.E:
                     continue
                 if cls.MPT(I) == 0.0:
@@ -568,7 +562,7 @@ class Train:
             (0.001, 250.0))
         cls.PARSP()
         cls.PARPR()
-        for I in range(1, cls.N0+1):
+        for I in fortran.DO(1, cls.N0):
             cls.F1.set_elem(I, 0.0)
             cls.F.set_elem(I, 0.0)
             cls.FT.set_elem(I, 0.0)
@@ -587,11 +581,11 @@ class Train:
     def TORM1(cls):
         N12 = 1
         N13 = cls.NC1
-        for K in range(1, cls.N+1):
+        for K in fortran.DO(1, cls.N):
             #
             Y = abs(cls.V(K))
             Y1 = (Y + cls.C4) / (Y + cls.C5)
-            for I in range(N12, N13+1):
+            for I in fortran.DO(N12, N13):
                 if cls.P0 > 0:
                     if cls.FT(I) >= 0.0:
                         continue # ~ goto lbl 80
@@ -669,14 +663,15 @@ class Train:
             N12 += cls.NC1
             N13 += cls.NC1 # lbl 90
 
-        if True not in (cls.FT(I) < 0.0 for I in range(1, cls.N0+1)):
+        if True not in (cls.FT(I) < 0.0 \
+          for I in fortran.DO(1, cls.N0)):
             cls.P0 = 0
 
         # lbl 692
         if cls.M21 == 0:
             return
         
-        for I in range(1, cls.N0+1):
+        for I in fortran.DO(1, cls.N0):
             if cls.M1(I) < cls.E or cls.MPT(I) < cls.E:
                 continue
             cls.F1.set_elem(I, cls.FT(I))
@@ -693,13 +688,13 @@ class Train:
         print('Формирование числа колодок на каждом экипаже (CK):')
         cls.CK = cls.FORMI()
         cls.inp('NTAU', 'Введите число сечений в поезде для задания параметров тормозных сил NTAU: ', 'int', (0,1000))
-        for I in range(1, cls.NTAU+1):
+        for I in fortran.DO(1, cls.NTAU):
             cls.inp('tmp_ITAU',
                 'Введите номер соответствующего сечения (#%s)' % str(I),
                 'int')
             cls.ITAU.set_elem(I, cls.tmp_ITAU)
-        for I in range(1, cls.NTAU+1):
-            for J in range(1, cls.ITAU(I)+1):
+        for I in fortran.DO(1, cls.NTAU):
+            for J in fortran.DO(1, cls.ITAU(I)):
                 cls.inp('tmp_YTAU', 'Введите значение параметра в узле #%s,%s YTAU: ' % (I, J))
                 cls.YTAU.set_elem((I, J), cls.tmp_YTAU)
         NTAU1 = cls.NTAU - 1
@@ -713,7 +708,7 @@ class Train:
                 J2 = int(cls.ITAU(I+1)) # TODO: maybe 0.0
                 print('I:', I, 'J1:', J1, 'J2:', J2)
                 print('cls.ITAU:', cls.ITAU)
-                for K1 in range(J1, J2+1):
+                for K1 in fortran.DO(J1, J2):
                     tmp = ( cls.YTAU((I+1, J)) - cls.YTAU((I, J)) ) / (J2 - J1) \
                         * (K1 - J1) + cls.YTAU((I, J))
                     TAUOB.set_elem((K1,J), tmp)
@@ -729,7 +724,7 @@ class Train:
             I = 0
             continue
         
-        for I in range(1, cls.N0+1):
+        for I in fortran.DO(1, cls.N0):
             cls.TAU.set_elem(I, TAUOB((I, 1)))
             cls.TAU1.set_elem(I, TAUOB((I, 2)))
             cls.TAU2.set_elem(I, TAUOB((I, 3)))
@@ -751,14 +746,14 @@ class Train:
             cls.K07.set_elem(I, TAUOB((I, 19)))
             cls.K08.set_elem(I, TAUOB((I, 20)))
             cls.K09.set_elem(I, TAUOB((I, 21)))
-        for I in range(1, cls.N0+1):
+        for I in fortran.DO(1, cls.N0):
             cls.FT.set_elem(I, 0.0)
             cls.TT = 0.0
             cls.T0 = 0.0
 
     @classmethod
     def SOPR1(cls):
-        for I in range(1, cls.N0+1):
+        for I in fortran.DO(1, cls.N0):
             Y1 = cls.V(I)
             Y = abs(Y1)
             cls.W.set_elem(I, 
@@ -776,7 +771,7 @@ class Train:
         if cls.M21 == 0:
             return
         
-        for I in range(1, cls.N0+1):
+        for I in fortran.DO(1, cls.N0):
             if cls.M21 < cls.E or cls.MPT(I) <= cls.E:
                 break
             cls.W1.set_elem(I, cls.W(I))
@@ -796,7 +791,7 @@ class Train:
 
             print('Введите W(I):')
             cls.W = cls.FORMI()
-            for I in range(1, cls.N0+1):
+            for I in fortran.DO(1, cls.N0):
                 cls.W.set_elem(I, -cls.W(I))
             print('Силы основного сопротивления движению постоянны W(I)=CONST:', cls.W)
 
@@ -806,10 +801,10 @@ class Train:
             print('Введите MPT(I):')
             cls.MPT = cls.FORMI()
 
-            for I in range(1, cls.N0+1):
+            for I in fortran.DO(1, cls.N0):
                 cls.W1.set_elem(I, 0.0)
 
-            for I in range(1, cls.N+1):
+            for I in fortran.DO(1, cls.N):
                 if cls.M1(I) < cls.E or cls.MPT(I) <= cls.E:
                     continue
                 cls.W1.set_elem(I, cls.W(I))
@@ -827,7 +822,7 @@ class Train:
             print('Введите MPT(I):')
             cls.MPT = cls.FORMI()
 
-            for I in range(1, cls.N0+1):
+            for I in fortran.DO(1, cls.N0):
                 cls.W1.set_elem(I, 0.0)
 
         return
@@ -839,7 +834,7 @@ class Train:
     @classmethod
     def PROF1(cls):
         cls.X.set_elem(1, -cls.Q(1))
-        for I in range(2, cls.N+1):
+        for I in fortran.DO(2, cls.N):
             cls.X.set_elem(
                 I,
                 cls.X(I-1) - 0.5*(cls.LB(I-1) + cls.LB(I)),
@@ -847,14 +842,14 @@ class Train:
         N12 = 1
         N13 = cls.NC1 - 1
         K1 = 1
-        for J in range(1, cls.N+1):
+        for J in fortran.DO(1, cls.N):
             cls.XO.set_elem(
                 K1,
                 cls.X(J) + 0.5 * (cls.LB(J) - cls.LB0(K1)),
             )
             if cls.NC1 <= 1:
                 break
-            for I in range(N12, N13+1):
+            for I in fortran.DO(N12, N13):
                 cls.XO.set_elem(
                     I+1,
                     cls.XO(I) - 0.5 * (cls.LB0(I) + cls.LB0(I+1)),
@@ -863,11 +858,11 @@ class Train:
             N13 += cls.NC1
         # label 116
         K1 += cls.NC1
-        for I in range(1, cls.N0+1):
+        for I in fortran.DO(1, cls.N0):
             Y = cls.XO(I)
             if Y > 0: # else goto 4
                 Y2 = Y
-                for L in range(cls.IND, cls.P3+1, 2): # TODO: DO 3 L=IND,P3,2
+                for L in fortran.DO(cls.IND, cls.P3, 2): # TODO: DO 3 L=IND,P3,2
                     skip_label_4 = False # to make GOTO 11
                     Y1 = Y - cls.A(L)
                     if Y1 >= 0: # else goto 5
@@ -909,7 +904,7 @@ class Train:
             (1, 1000))
         if cls.LP1 <= 0:
             # label 12
-            for I in range(1, cls.N0+1):
+            for I in fortran.DO(1, cls.N0):
                 cls.FP.set_elem(I, 0)
             print('Движение по площадке (ровная поверхность?)')
             return
@@ -920,27 +915,27 @@ class Train:
             'Введите P: ',
             'int',
             (1, 1000))
-        for I in range(1, 400+1):
+        for I in fortran.DO(1, 400): # TODO: why hardcode?
             cls.DI.set_elem(I, 0)
             cls.LP.set_elem(I, 0)
             cls.R.set_elem(I, 0)
         P1 = cls.P + 1
         print('Параметры профиля пути:')
-        for I in range(1, P1+1):
+        for I in fortran.DO(1, P1):
             cls.inp('tmp_DI',
                 'Введите DI(%s): ' % str(I),
                 'float',
                 (1e-9, 1e+9),
             )
             cls.DI.set_elem(I, cls.tmp_DI)
-        for I in range(1, cls.P+1):
+        for I in fortran.DO(1, cls.P):
             cls.inp('tmp_LP',
                 'Введите LP(%s): ' % str(I),
                 'float',
                 (1e-9, 1e+9),
             )
             cls.LP.set_elem(I, cls.tmp_LP)
-        for I in range(1, cls.P+1):
+        for I in fortran.DO(1, cls.P):
             cls.inp('tmp_R',
                 'Введите R(%s): ' % str(I),
                 'float',
@@ -948,20 +943,20 @@ class Train:
             )
             cls.R.set_elem(I, cls.tmp_R)
         L = 1
-        for K in range(1, cls.P+1):
+        for K in fortran.DO(1, cls.P):
             Y = cls.DI(K+1) - cls.DI(K)
             Y1 = abs(cls.R(K))
-            cls.R.set_elem(K, sign(cls.R(K), Y))
+            cls.R.set_elem(K, fortran.SIGN(cls.R(K), Y))
             cls.A.set_elem(L, Y1 * abs(Y))
             cls.A.set_elem(L+1, cls.LP(K))
             L += 2
         print('R:', cls.R)
         P2 = cls.P + cls.P
         P3 = P2 - 1
-        for L in range(2, P2+1):
+        for L in fortran.DO(2, P2):
             cls.A.set_elem(L, cls.A(L) + cls.A(L-1))
         print('A:', cls.A)
-        for I in range(1, cls.N0+1):
+        for I in fortran.DO(1, cls.N0):
             cls.PM0.set_elem(I, cls.M0(I) * const.g)
         cls.IND = 1
         return
@@ -982,7 +977,7 @@ class Train:
         cls.inp('NFP2', 'Введите NFP2: ', 'int', (0, 10000))
         cls.inp('NVOZ', 'Введите NVOZ: ', 'int', (0, 10000))
 
-        for I in range(1, cls.N+1):
+        for I in fortran.DO(1, cls.N):
             cls.V1M.set_elem(I, 0.0)
             cls.V10.set_elem(I, 0.0)
             cls.SMAX.set_elem(I, 0.0)
@@ -1006,7 +1001,7 @@ class Train:
         Y2 = 0.0
         NL15 = 0
         NL16 = 0
-        for I in range(2, cls.N+1):
+        for I in fortran.DO(2, cls.N):
             if cls.S(I) >= 0:
                 # label 4
                 if cls.SMAX(I)<= cls.S(I):
@@ -1027,7 +1022,7 @@ class Train:
                     Y2 = cls.S(I)
                     NL16 = I
             # label 12: continue
-        for I in range(1, cls.N+1):
+        for I in fortran.DO(1, cls.N):
             if cls.S(I) >= 0:
                 # label 44
                 if cls.S1MAX(I) <= cls.S1(I):
@@ -1039,7 +1034,7 @@ class Train:
                     # label 66
                     cls.S10.set_elem(I, cls.S1(I))
             # label 112: continue
-        for I in range(1, cls.N+1):
+        for I in fortran.DO(1, cls.N):
             if cls.A2(I+1) >= 0:
                 # label 24
                 if cls.V1M(I) <= cls.A2(I+1):
@@ -1069,6 +1064,26 @@ class Train:
         cls.SMAX2 = 0.0
         cls.SO2 = 0.0
         cls.TPSM = cls.T + cls.HPSM
+
+    @classmethod
+    def VUMAX(cls):
+        print('SMAX:', cls.SMAX)
+        print('S0:', cls.S0)
+        print('Q:', cls.Q)
+        print('S:', cls.S)
+        print('V:', cls.V)
+        print('V1M:', cls.V1M)
+        print('V10:', cls.V10)
+        print('S1MAX:', cls.S1MAX)
+        print('S10:', cls.S10)
+
+        for I in fortran.DO(1, cls.N):
+            cls.V1M.set_elem(I, 0.0)
+            cls.V10.set_elem(I, 0.0)
+            cls.SMAX.set_elem(I, 0.0)
+            cls.S1MAX.set_elem(I, 0.0)
+            cls.S10.set_elem(I, 0.0)
+            cls.S0.set_elem(I, 0.0)
 
     @classmethod
     def are_limits_reached(cls):
