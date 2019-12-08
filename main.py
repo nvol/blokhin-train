@@ -1,0 +1,1190 @@
+import const
+from init import initial_dataset
+from classes import Arr
+from copy import deepcopy
+# import matplotlib.pyplot as plt
+
+
+def sign(A, B):
+    # returns the value of A with the sign of B
+    if B < 0:
+        return -abs(A)
+    return abs(A)
+
+
+# def inp(prompt, val_type=None, limits=None):
+#     entered_value = None
+#     while True:
+#         entered_value = input(prompt)
+#         try:
+#             if val_type == 'int':
+#                 entered_value = int(entered_value)
+#             else:
+#                 entered_value = float(entered_value)
+#             if limits is not None and not (limits[0] <= entered_value <= limits[1]):
+#                 print(
+#                     'Введено недопустимое значение, введите число в пределах от %s до %s' %
+#                     (str(limits[0]), str(limits[1])))
+#                 continue
+#             break
+#         except Exception as e:
+#             print('Простите, непонятно (%s), давайте ещё раз попробуем.' % str(e))
+#             continue
+#     return entered_value
+
+'''
+[__6____] - [__5___] - [__4___] - [__3___] - [__2___] - [__1___],
+'''
+
+
+class Train:
+    N = 1   # n - число экипажей или групп (для укороченной системы)
+    N0 = 1  # число экипажей всего
+    NC1 = 1 # число экипажей в группе (величина постоянная!)
+
+    X = 0.0 # координата головного экипажа (x1)
+    V = Arr()   # скорости экипажей
+
+    LB0 = Arr() # длины экипажей
+    LB = Arr()  # длины групп
+
+    M0 = Arr()  # массы экипажей
+    M = Arr()   # массы групп
+
+    A1 = Arr() # t, v[1], ..., v[n], q[1], ..., q[n] -- всего 2n+1 элементов
+    A2 = Arr() # 1, v'[1], ..., v'[n], q'[1], ..., q'[n] -- всего 2n+1 элементов
+    A3 = Arr()
+    A4 = Arr()
+    A5 = Arr()
+
+    Q = Arr()   # деформация i-го межвагонного соединения
+                # (или соединения между группами экипажей),
+                # в начальный момент 
+    S = Arr()
+
+    FB = Arr()
+    FP = Arr()
+    F = Arr()
+    F1 = Arr()
+    FT = Arr()
+    W = Arr()
+    W1 = Arr()
+    MPT = Arr()
+
+    H = 0.001
+    H1 = None
+    NU = 1
+
+    MU = 1
+    M2 = 1
+    M21 = 0
+    M1 = Arr()
+    S1 = Arr()
+    E = 0.0001
+
+    T = 0.0     # шкала времени
+    TP = 0.0    # 
+
+    # конечные условия
+    TK = 30.0   # конечное время (максимальное)
+    VK = 0.001  # конечная скорость (минимальная)
+    XK = 1000.0 # конечная координата (максимальная)
+
+    VGR = 0.0013
+    HGR = 0.0
+
+    VOT = 0.0 # скорость первого вагона, при которой начинается отпуск
+
+    IA = Arr()
+    IA1 = Arr()
+    IA11 = Arr()
+    AH = Arr()
+    AP = Arr()
+
+    K = Arr()
+    D = Arr()
+    BETA = Arr()
+    HETA = Arr()
+    KK = Arr()
+    SM = Arr()
+    DM = Arr()
+
+    IM = 1
+    P0 = 0
+    PR = 0
+    PR1 = 0
+    PRT = 0
+    PST = 0
+    PSR = 0
+    PT = 0
+    X1 = Arr()
+    VS = 0
+
+    C1 = 0.0
+    C2 = 0.0
+    C3 = 0.0
+    C4 = 0.0
+    C5 = 0.0
+    CK = Arr()
+    NTAU = 0
+    ITAU = Arr()
+    YTAU = Arr()
+
+    TAU = Arr()
+    TAU1 = Arr()
+    TAU2 = Arr()
+    TAU3 = Arr()
+    TAU4 = Arr()
+    TAU5 = Arr()
+    TAU6 = Arr()
+    TAUOT = Arr()
+    TAU7 = Arr()
+    TAU8 = Arr()
+    TAU9 = Arr()
+    TAU10 = Arr()
+    K01 = Arr()
+    K02 = Arr()
+    K03 = Arr()
+    K04 = Arr()
+    K05 = Arr()
+    K06 = Arr()
+    K07 = Arr()
+    K08 = Arr()
+    K09 = Arr()
+
+    W0 = 0.0
+    A0 = 0.0
+    W01 = 0.0
+    A11 = 0.0
+    A22 = 0.0
+
+    M3 = 0
+
+    P = 0
+    PM0 = Arr()
+    DI = Arr()
+    LP = Arr()
+    R = Arr()
+    A = Arr()
+
+    IND = 0
+
+    V1M = 0.0
+    V10 = 0.0
+    SMAX = 0.0
+    S1MAX = 0.0
+    S10 = 0.0
+    S0 = 0.0
+
+    HP = 0.0
+    TP = 0.0
+    HPM = 0.0
+    TPM = 0.0
+    HPSM = 0.0
+    TPSM = 0.0
+    SMAX1 = 0.0
+    SMAX2 = 0.0
+
+    SO1 = 0.0
+    SO2 = 0.0
+    NL10 = 0
+    NL13 = 0
+    #NL15 = 0
+    #NL16 = 0
+    NL17 = 0
+    NL18 = 0
+
+    @classmethod
+    def inp(cls, var_name, prompt, val_type=None, limits=None):
+        if not hasattr(cls, var_name):
+            if not var_name.startswith('tmp_'):
+                raise (AttributeError('class %s has no attribute %s' % (
+                    cls.__name__, var_name,
+                )))
+        # try to get value from initials
+        if var_name in initial_dataset:
+            setattr(cls, var_name, initial_dataset[var_name])
+            print('Присвоено значение:',
+                  var_name, '=', getattr(cls, var_name),
+                  '@ (%s)' % prompt)
+            return
+
+        entered_value = None
+        while True:
+            entered_value = input(prompt)
+            try:
+                if val_type == 'int':
+                    entered_value = int(entered_value)
+                else:
+                    entered_value = float(entered_value)
+                if limits is not None and not (limits[0] <= entered_value <= limits[1]):
+                    print(
+                        'Введено недопустимое значение, введите число в пределах от %s до %s' %
+                        (str(limits[0]), str(limits[1])))
+                    continue
+                break
+            except Exception as e:
+                print('Простите, непонятно (%s), давайте ещё раз попробуем.' % str(e))
+                continue
+        cls.locals()[var_name] = entered_value
+
+    @classmethod
+    def PARVAG1(cls):
+        cls.inp('N0',
+            'Введите число масс в полной системе (N0): ',
+            'int',
+            (1, 1000)) # print('cls.N0:', cls.N0)
+
+        ###@@@!!!@@@### do not use shortened system => cls.N = cls.N0, cls.NC1 = 1
+        cls.N = cls.N0 ###@@@ TODO: ATTENTION: не укорачиваем систему!
+
+        ###@@@
+        # cls.inp('N',
+        #     'Введите число масс в укороченной системе (число групп) (N): ',
+        #     'int',
+        #     (1, cls.N0))
+        # if (cls.N0 % cls.N) != 0:
+        #     print('Ошибка: N0 не делится без остатка на N')
+        #     exit(0)
+        cls.NC1 = cls.N0 // cls.N
+
+        print('Введите массы экипажей для полной системы (M0):')
+        cls.M0 = cls.FORMI()
+        cls.M = deepcopy(cls.M0)
+        print('cls.M0:', cls.M0)
+        print('cls.M:', cls.M)
+        print('Введите длины экипажей для полной системы (LB0):')
+        cls.LB0 = cls.FORMI()
+        cls.LB = deepcopy(cls.LB0)
+        print('cls.LB0:', cls.LB0)
+        print('cls.LB:', cls.LB)
+
+    @classmethod
+    def VVONU1(cls):
+        print('Формирование Q(I):')
+        cls.Q = cls.FORMI()
+        ### cls.MINPOR(cls.Q) ###@@@ TODO: MINPOR!
+
+        print('Формирование V(I):')
+        cls.V = cls.FORMI()
+
+        I = 2 # label 10
+        for J in range(1, cls.N+1):
+            cls.A1.set_elem(I, cls.V(J))
+            cls.A2.set_elem(I, 0.0)
+            I += 1 # label 11
+        
+        I = cls.N + 2
+        cls.Q.set_elem(1, cls.Q(1) - (cls.LB0(1) - cls.LB(1)) * 0.5)
+        for J in range(1, cls.N+1):
+            cls.A1.set_elem(I, cls.Q(J))
+            I += 1 # label 12
+        
+        print('Начальные условия:')
+        print('V:', cls.V)
+        print('Q:', cls.Q)
+
+    @classmethod
+    def SPRAV1(cls):
+        cls.T = cls.A1(1)
+
+        for I in range(1, cls.N+1):
+            cls.V.set_elem(I, cls.A1(I+1))
+
+        for I in range(1, cls.N+1):
+            L = I + cls.N + 1
+            cls.Q.set_elem(I, cls.A1(L))
+
+        for I in range(2, cls.N+1):
+            L = I + cls.N + 1
+            cls.A2.set_elem(L, cls.V(I-1)- cls.V(I))
+        cls.A2.set_elem(cls.N+2, 0.0 - cls.V(1))
+
+        cls.APPARAT1() # SILA
+        cls.FVOZM1()
+
+        N1 = cls.N - 1
+        for I in range(1, N1+1):
+            cls.A2.set_elem(I+1, (cls.S(I) - cls.S(I+1) + cls.FB(I))/cls.M(I))
+        cls.A2.set_elem(cls.N+1, (cls.S(cls.N) + cls.FB(cls.N))/cls.M(cls.N))
+
+    @classmethod
+    def RKUT2(cls):
+        for I in range(1, cls.NU+1):
+            cls.A4.set_elem(I, cls.A2(I))
+            cls.A5.set_elem(I, cls.A1(I))
+            cls.A1.set_elem(I, cls.A1(I) + cls.A2(I) * cls.H1)
+        cls.SPRAV1()
+        for I in range(1, cls.NU+1):
+            cls.A1.set_elem(I, cls.A5(I) + 2 * cls.H1 * cls.A2(I))
+
+    @classmethod
+    def INTEGR(cls):
+        for I in range(1, cls.NU+1):
+            cls.A6.set_elem(I, cls.A3(I))
+            cls.A3.set_elem(I, cls.A1(I))
+            cls.A1.set_elem(I, cls.A3(I) + (3.0 * cls.A2(I) - cls.A4(I)) * cls.H1)
+            cls.A5.set_elem(I, cls.A1(I))
+            cls.A7.set_elem(I, cls.A4(I))
+            cls.A4.set_elem(I, cls.A2(I))
+            cls.SPRAV1()
+        for I in range(1, cls.NU+1):
+            cls.A1.set_elem(I, cls.A3(I) + (cls.A4(I) + cls.A2(I)) * cls.H1)
+        if cls.PVH >= 1:
+            ALFA = 0.0
+            for I in range(cls.NP, cls.NP1+1):
+                Y1 = abs((cls.A5(I) - cls.A1(I)) / 6.0)
+                if ALFA < Y1:
+                    ALFA = Y1
+            if ALFA > cls.HGR:
+                if ALFA > cls.VGR:
+                    cls.H1 = 0.5 * cls.H
+                    for I in range(1, cls.NU+1):
+                        cls.A1.set_elem(I, cls.A3(I))
+                        cls.A2.set_elem(I, cls.A4(I))
+                    cls.RKUT2()
+            else: # ALFA <= cls.HGR
+                cls.H1 *= 2.0
+                cls.SPRAV1()
+                for I in range(1, cls.NU+1):
+                    cls.A3.set_elem(I, cls.A6(I))
+                    cls.A4.set_elem(I, cls.A7(I))
+                return
+            cls.SPRAV1()
+
+    @classmethod
+    def PARINT(cls):
+        cls.inp('H', 'Задайте шаг интегрирования: ', 'float', (1e-9, 1.0))
+        cls.H *= cls.NC1
+        cls.inp('PVH',
+            'Введите 1 для интегрирования с переменным шагом, 0 - с постоянным: ',
+            'int',
+            (0, 1))
+        if cls.PVH >= 1:
+            cls.NP = cls.N + 2
+            cls.NP1 = 2*cls.N + 1
+
+            cls.inp('VGR', 'Задайте верхнюю границу допускаемой погрешности: ', 'float', (1e-9, 1.0))
+            cls.inp('HGR', 'Задайте нижнюю границу допускаемой погрешности: ', 'float', (0.0, cls.VGR))
+            cls.VGR *= cls.NC1
+            cls.HGR *= cls.NC1
+            print('Интегрирование с переменным шагом')
+            print('Допускаемая погрешность: верхняя граница = %s, нижняя граница = %s' %
+                (str(cls.VGR), str(cls.HGR)))
+        else:
+            print('Интегрирование с постоянным шагом %s' % str(cls.H))
+        
+        cls.H1 = 0.5 * cls.H
+        cls.NU = 2 * cls.N + 1
+        cls.MU = cls.M2 + 1
+        for I in range(2, cls.N+1):
+            if cls.IA1(I) != 0.0:
+                cls.NU += cls.MU
+        if cls.M21 != 0:
+            for I in range(1, cls.N+1):
+                if cls.M1 > cls.E:
+                    cls.NU += 2
+                    if cls.IA11(I) > cls.E:
+                        cls.NU += 2
+        cls.A1.set_elem(1, 0.0)
+        cls.A2.set_elem(1, 1.0)
+        for I in range(1, cls.NU+1):
+            cls.A3.set_elem(I, 0.0)
+            cls.A4.set_elem(I, 0.0)
+
+    @classmethod
+    def FORMI(cls):
+        RES = Arr()
+        ###@@@ NUP = Arr(20, 0)
+        ###@@@ TABL = Arr(20, 0.0)
+        NUP, TABL = Arr(), Arr() ###@@@
+        rest = cls.N0 ###@@@
+        I = 0 ###@@@
+        while True: ###@@@ for I in range(1, 20+1):
+            I += 1
+            cls.inp('tmp_NUP', 'NUP(%s): ' % str(I), 'int', (1, rest))
+            NUP.set_elem(I, cls.tmp_NUP)
+            rest -= NUP(I) ###@@@
+            if rest == 0: ###@@@
+                break ###@@@
+        IK = int(sum([i for i in NUP])) ###@@@
+        NK = len(NUP)
+        print('NK:', NK)
+        ###@@@ IK, NK = 0, 0
+        ###@@@
+        # for I in range(1, 20+1):
+        #     if NUP(I) == 0:
+        #         break
+        #     IK += NUP(I)
+        #     NK += 1
+        assert(IK == cls.N0)
+        print('NUP:', NUP) ### TODO: TODEL
+        for I in range(1, NK+1):
+            cls.inp('tmp_TABL', 'TABL(%s): ' % str(I))
+            TABL.set_elem(I, cls.tmp_TABL)
+        print('TABL:', TABL) ### TODO: TODEL
+
+        ret = list()
+        for ix, n in NUP.enumerate():
+            ret += [TABL(ix) for _ in range(n)]
+        return Arr(lst=ret)
+
+        ###@@@
+        # L = 1
+        # for I in range(1, NK+1):
+        #     while True:
+        #         RES.set_elem(L, TABL(I))
+        #         L += 1
+        #         if L > cls.N0:
+        #             break
+        #         if L > NUP(I):
+        #             break
+        #         NUP.set_elem(I+1, NUP(I+1) + NUP(I))
+        #     if L > cls.N0:
+        #         break
+        # return RES
+
+    # @classmethod
+    # def MINPOR(cls, TBL_IN):
+    #     # использует cls.NC1 (число экипажей в группе)
+    #     # и cls.N (число групп) для разбиения на группы
+    #     # (суммирования параметров в группе)
+    #     TBL_OUT = Arr()
+    #     N1 = 1
+    #     N2 = cls.NC1
+    #     for IK in range(1, cls.N+1):
+    #         Y1 = 0
+    #         for I in range(N1, N2+1):
+    #             Y1 += TBL_IN(I) # label 51
+    #         TBL_OUT.set_elem(IK, Y1)
+    #         N1 += cls.NC1
+    #         N2 += cls.NC1 # label 50
+    #     return TBL_OUT
+    
+    @classmethod
+    def APPARAT1(cls):
+        for I in range(2, cls.N+1):
+            L = I + cls.N + 1
+            X = None
+            if cls.Q(I) < 0:
+                X = cls.Q(I)
+            else:
+                X = cls.Q(I) - cls.D(I)
+            X1 = abs(X)
+            if cls.Q(I) * X <= 0:
+                cls.S.set_elem(I, 0.0)
+                # continue
+            else:
+                if X1 - cls.DM(I) < 0:
+                    if cls.Q(I) * cls.A2(L) >= 0:
+                        Y1 = cls.K(I) * X
+                        Y2 = X * cls.KK(I) + cls.AH(I) + cls.A2(L) * cls.BETA(I)
+                        if abs(Y1) < abs(Y2):
+                            cls.S.set_elem(I, Y1)
+                            cls.AP.set_elem(I, Y1 - cls.KK(I) * X)
+                        else:
+                            cls.S.set_elem(I, Y2)
+                            cls.AP.set_elem(I, cls.AH(I))
+                    else:
+                        Y3 = cls.K(I) * X
+                        Y1 = Y3 * cls.HETA(I)
+                        Y2 = cls.KK(I) * X + cls.AP(I) + cls.A2(L) * cls.BETA(I)
+                        if Y1 * Y2 > 0:
+                            if abs(Y1) <= abs(Y2):
+                                if abs(Y2) <= abs(Y3):
+                                    cls.S.set_elem(I, Y2)
+                                    cls.AH.set_elem(I, cls.AP(I))
+                                else:
+                                    cls.S.set_elem(I, Y3)
+                                    cls.AP.set_elem(I, Y3 - cls.KK(I) * X)
+                            else: #lbl 13
+                                cls.S.set_elem(I, Y1)
+                                cls.AH.set_elem(I, Y1 - cls.KK(I) * X)
+                        else: #lbl 13 again
+                            cls.S.set_elem(I, Y1)
+                            cls.AH.set_elem(I, Y1 - cls.KK(I) * X)
+                else:
+                    s_new = None
+                    if cls.Q(I) >= 0:
+                        s_new = (X1 - cls.DM(I)) * cls.KK(I) + cls.SM(I) + \
+                                cls.A2(L) * cls.BETA(I)
+                    else:
+                        s_new = -(X1 - cls.DM(I)) * cls.KK(I) - cls.SM(I) + \
+                                cls.A2(L) * cls.BETA(I)
+                    cls.S.set_elem(I, s_new)
+
+    @classmethod
+    def PARS(cls):
+        print('Введите жёсткости (K):')
+        cls.K = cls.FORMI()
+        print('Введите зазоры (D):')
+        cls.D = cls.FORMI()
+        print('Введите коэф. BETA:')
+        cls.BETA = cls.FORMI()
+        print('Введите коэф. HETA:')
+        cls.HETA = cls.FORMI()
+        print('Введите жёсткости (KK):')
+        cls.KK = cls.FORMI()
+        print('Введите параметры SM:')
+        cls.SM = cls.FORMI()
+        print('Введите параметры DM:')
+        cls.DM = cls.FORMI()
+        
+        if cls.NC1 != 1:
+            for I in range(1, cls.N0+1):
+                # TODO: shorten system ###@@@!!!@@@###
+                pass ###@@@ ... = MINPOR()
+
+        for I in range(1, 100+1):
+            cls.IA.set_elem(I, 0.0)
+            cls.AH.set_elem(I, 0.0)
+            cls.AP.set_elem(I, 0.0)
+            cls.S.set_elem(I, 0.0)
+
+    @classmethod
+    def PARG(cls): # AMORTOR4 version
+        print('Крепление грузов к вагонам - жёсткое!')
+        cls.M21 = 0
+        for I in range(1, cls.N0+1):
+            cls.S1.set_elem(I, 0.0)
+            cls.M1.set_elem(I, 0.0)
+        cls.E = 0.0001
+        print('Предельное значение V=E=%s' % str(cls.E))
+
+    @classmethod
+    def FVOZM1(cls):
+        if cls.LP1 > 0:
+            # label 5
+            cls.PROF3() # TODO: будем пока использовать PROF3 (профиль без изгибов), но есть и PROF1
+        # label 8
+        cls.VNESH4() # call VNESH
+        for I in range(1, cls.N0+1):
+            D = -sign(1.0, cls.V(I))
+            cls.FT.set_elem(I, cls.FT(I) * D)
+            cls.W.set_elem(I, abs(cls.W(I)) * D)
+            cls.FB.set_elem(I, cls.FP(I) + cls.F(I) + cls.FT(I) + cls.W(I))
+        if cls.NC1 != 1:
+            pass # cls.FB = cls.MINPOR(cls.FB) # TODO: пока не укорачиваем ничего!
+
+    @classmethod
+    def VNESH4(cls): # VNESH4 version (calls TORM1)
+        if cls.PRT + cls.P0 == 0:
+            return
+        cls.TORM1()
+        if cls.M21 != 0:
+            for I in range(1, cls.N0+1):
+                if cls.M1 < cls.E:
+                    continue
+                if cls.MPT(I) == 0.0:
+                    continue
+                cls.F1.set_elem(I, cls.FT(I))
+                cls.FT.set_elem(I, 0.0)
+        if cls.V(1) > cls.VOT:
+            return
+        if cls.IM == 2:
+            return
+        cls.T0 = cls.T
+        cls.IM = 2
+        cls.P0 = 1
+        cls.PRT = 0
+
+    @classmethod
+    def PARVF(cls): # for VNESH4 version (calls TORM1)
+        cls.PARTOR()
+        cls.inp('VOT', 'Введите скорость первого вагона, при которой начинается отпуск (VOT): ',
+            'float',
+            (0.001, 250.0))
+        cls.PARSP()
+        cls.PARPR()
+        for I in range(1, cls.N0+1):
+            cls.F1.set_elem(I, 0.0)
+            cls.F.set_elem(I, 0.0)
+            cls.FT.set_elem(I, 0.0)
+        cls.IM = 1
+        cls.P0 = 0
+        cls.PR = 0
+        cls.PR1 = 0
+        cls.PRT = 0
+        cls.PST = 0
+        cls.PSR = 0
+        cls.PT = 0
+        cls.X1.set_elem(1, 0.0)
+        cls.VS = 0
+
+    @classmethod
+    def TORM1(cls):
+        N12 = 1
+        N13 = cls.NC1
+        for K in range(1, cls.N+1):
+            #
+            Y = abs(cls.V(K))
+            Y1 = (Y + cls.C4) / (Y + cls.C5)
+            for I in range(N12, N13+1):
+                if cls.P0 > 0:
+                    if cls.FT(I) >= 0.0:
+                        continue # ~ goto lbl 80
+                    jump_to_lbl_32 = False
+                    cls.X = cls.T - cls.T0 - cls.TAUOT(I)
+                if cls.P0 <= 0 or cls.X < 0.0:
+                    # lbl 44
+                    cls.X = cls.T - cls.TT - cls.TAU(I)
+                    if cls.X <= 0:
+                        cls.FT.set_elem(I, 0.0)
+                        continue # ~ goto lbl 80
+
+                    # lbl 29
+                    X1 = cls.X - cls.TAU1(I)
+                    if X1 <= 0:
+                        Z = cls.K01(I) / cls.TAU1(I) * cls.X
+                        jump_to_lbl_32 = True # goto lbl 32
+                    else:
+                        X2 = X1 - cls.TAU2(I)
+                        if X2 <= 0:
+                            Z = (cls.K02(I) - cls.K01(I)) / cls.TAU2(I) * X1 + cls.K01(I)
+                            jump_to_lbl_32 = True # goto lbl 32
+                        else:
+                            X3 = X2 - cls.TAU3(I)
+                            if X3 <= 0:
+                                Z = (cls.K03(I) - cls.K02(I)) / cls.TAU3(I) * X2 + cls.K02(I)
+                                jump_to_lbl_32 = True # goto lbl 32
+                            else:
+                                X4 = X3 - cls.TAU4(I)
+                                if X4 <= 0:
+                                    Z = (cls.K04(I) - cls.K03(I)) / cls.TAU4(I) * X3 + cls.K03(I)
+                                    jump_to_lbl_32 = True # goto lbl 32
+                                else:
+                                    X5 = X4 - cls.TAU5(I)
+                                    if X5 <= 0:
+                                        Z = (cls.K05(I) - cls.K04(I)) / cls.TAU5(I) * X4 + cls.K04(I)
+                                        jump_to_lbl_32 = True # goto lbl 32
+                                    else:
+                                        X6 = X5 - cls.TAU6(I)
+                                        if X5 <= 0:
+                                            Z = (cls.K06(I) - cls.K05(I)) / cls.TAU6(I) * X5 + cls.K05(I)
+                                            jump_to_lbl_32 = True # goto lbl 32
+                                        else:
+                                            Z = cls.K06(I)
+                                            jump_to_lbl_32 = True # goto lbl 32
+
+                    if not jump_to_lbl_32:
+                        X1 = cls.X - cls.TAU7(I)
+                        if X1 <= 0:
+                            Z = cls.K06(I) - ((cls.K06(I) - cls.K07(I)) / cls.TAU7(I) * cls.X)
+                            # goto lbl 32
+                        else:
+                            X2 = X1 - cls.TAU8(I)
+                            if X2 <= 0:
+                                Z = cls.K07(I) - ((cls.K07(I) - cls.K08(I)) / cls.TAU8(I) * X1)
+                                # goto lbl 32
+                            else:
+                                X3 = X2 - cls.TAU9(I)
+                                if X3 <= 0:
+                                    Z = cls.K08(I) - ((cls.K08(I) - cls.K09(I)) / cls.TAU9(I) * X2)
+                                    # goto lbl 32
+                                else:
+                                    X4 = X3 - cls.TAU10(I)
+                                    if X4 <= 0:
+                                        Z = cls.K09(I) - ((cls.K09(I) / cls.TAU10(I)) * X3)
+                                        # goto lbl 32
+                                    else:
+                                        cls.FT.set_elem(I, 0.0) # lbl 34
+                                        continue # goto lbl 80
+
+                    # lbl 32
+                    cls.FT.set_elem(I, -cls.C1 * cls.CK * Z * (Z + cls.C2) / (Z + cls.C3) * Y1)
+
+            # after for I
+            N12 += cls.NC1
+            N13 += cls.NC1 # lbl 90
+
+        if True not in (cls.FT(I) < 0.0 for I in range(1, cls.N0+1)):
+            cls.P0 = 0
+
+        # lbl 692
+        if cls.M21 == 0:
+            return
+        
+        for I in range(1, cls.N0+1):
+            if cls.M1(I) < cls.E or cls.MPT(I) < cls.E:
+                continue
+            cls.F1.set_elem(I, cls.FT(I))
+            cls.FT.set_elem(I, 0)
+
+    @classmethod
+    def PARTOR(cls):
+        TAUOB = Arr()
+        cls.inp('C1', 'Введите коэффициент C1 в тормозной формуле: ', 'float', (1e-9, 1e+9))
+        cls.inp('C2', 'Введите коэффициент C2 в тормозной формуле: ', 'float', (1e-9, 1e+9))
+        cls.inp('C3', 'Введите коэффициент C3 в тормозной формуле: ', 'float', (1e-9, 1e+9))
+        cls.inp('C4', 'Введите коэффициент C4 в тормозной формуле: ', 'float', (1e-9, 1e+9))
+        cls.inp('C5', 'Введите коэффициент C5 в тормозной формуле: ', 'float', (1e-9, 1e+9))
+        print('Формирование числа колодок на каждом экипаже (CK):')
+        cls.CK = cls.FORMI()
+        cls.inp('NTAU', 'Введите число сечений в поезде для задания параметров тормозных сил NTAU: ', 'int', (0,1000))
+        for I in range(1, cls.NTAU+1):
+            cls.inp('tmp_ITAU',
+                'Введите номер соответствующего сечения (#%s)' % str(I),
+                'int')
+            cls.ITAU.set_elem(I, cls.tmp_ITAU)
+        for I in range(1, cls.NTAU+1):
+            for J in range(1, cls.ITAU(I)+1):
+                cls.inp('tmp_YTAU', 'Введите значение параметра в узле #%s,%s YTAU: ' % (I, J))
+                cls.YTAU.set_elem((I, J), cls.tmp_YTAU)
+        NTAU1 = cls.NTAU - 1
+        I = 0
+        J = 0
+        while True: # lbl 705
+            J += 1
+            while True: # lbl 701
+                I += 1
+                J1 = cls.ITAU(I)
+                J2 = int(cls.ITAU(I+1)) ###@@@ maybe 0.0
+                print('I:', I, 'J1:', J1, 'J2:', J2)
+                print('cls.ITAU:', cls.ITAU)
+                for K1 in range(J1, J2+1):
+                    tmp = ( cls.YTAU((I+1, J)) - cls.YTAU((I, J)) ) / (J2 - J1) \
+                        * (K1 - J1) + cls.YTAU((I, J))
+                    TAUOB.set_elem((K1,J), tmp)
+                if I >= NTAU1: ###@@@
+                    break
+                # if I < NTAU1:
+                #     continue
+                # else:
+                #     break
+            if J >= 21:
+                break
+            #---
+            I = 0
+            continue
+        
+        for I in range(1, cls.N0+1):
+            cls.TAU.set_elem(I, TAUOB((I, 1)))
+            cls.TAU1.set_elem(I, TAUOB((I, 2)))
+            cls.TAU2.set_elem(I, TAUOB((I, 3)))
+            cls.TAU3.set_elem(I, TAUOB((I, 4)))
+            cls.TAU4.set_elem(I, TAUOB((I, 5)))
+            cls.TAU5.set_elem(I, TAUOB((I, 6)))
+            cls.TAU6.set_elem(I, TAUOB((I, 7)))
+            cls.TAUOT.set_elem(I, TAUOB((I, 8)))
+            cls.TAU7.set_elem(I, TAUOB((I, 9)))
+            cls.TAU8.set_elem(I, TAUOB((I, 10)))
+            cls.TAU9.set_elem(I, TAUOB((I, 11)))
+            cls.TAU10.set_elem(I, TAUOB((I, 12)))
+            cls.K01.set_elem(I, TAUOB((I, 13)))
+            cls.K02.set_elem(I, TAUOB((I, 14)))
+            cls.K03.set_elem(I, TAUOB((I, 15)))
+            cls.K04.set_elem(I, TAUOB((I, 16)))
+            cls.K05.set_elem(I, TAUOB((I, 17)))
+            cls.K06.set_elem(I, TAUOB((I, 18)))
+            cls.K07.set_elem(I, TAUOB((I, 19)))
+            cls.K08.set_elem(I, TAUOB((I, 20)))
+            cls.K09.set_elem(I, TAUOB((I, 21)))
+        for I in range(1, cls.N0+1):
+            cls.FT.set_elem(I, 0.0)
+            cls.TT = 0.0
+            cls.T0 = 0.0
+
+    @classmethod
+    def SOPR1(cls):
+        for I in range(1, cls.N0+1):
+            Y1 = cls.V(I)
+            Y = abs(Y1)
+            cls.W.set_elem(I, 
+              (
+                cls.W0 / (1.0 + cls.A0 * cls.W0 * Y) +
+                cls.W01 +
+                cls.A11 * Y +
+                cls.A22 * (Y**2)
+               ) * 0.001
+            )
+            cls.W.set_elem(I,
+                -cls.W(I) * cls.M0(I)
+            )
+        
+        if cls.M21 == 0:
+            return
+        
+        for I in range(1, cls.N0+1):
+            if cls.M21 < cls.E or cls.MPT(I) <= cls.E:
+                break
+            cls.W1.set_elem(I, cls.W(I))
+            cls.W.set_elem(I, 0)
+        
+        return
+
+    @classmethod
+    def PARSP(cls):
+        cls.inp('W0', 'Задайте параметр сил сопротивления W0: ', 'float', (1e-9, 1e+9))
+        cls.inp('A0', 'Задайте параметр сил сопротивления A0: ', 'float', (1e-9, 1e+9))
+        cls.inp('W01', 'Задайте параметр сил сопротивления W01: ', 'float', (1e-9, 1e+9))
+        cls.inp('A11', 'Задайте параметр сил сопротивления A11: ', 'float', (1e-9, 1e+9))
+        cls.inp('A22', 'Задайте параметр сил сопротивления A22: ', 'float', (1e-9, 1e+9))
+        if abs(cls.W0) < 0.00001:
+            cls.M3 = 0
+
+            print('Введите W(I):')
+            cls.W = cls.FORMI()
+            for I in range(1, cls.N0+1):
+                cls.W.set_elem(I, -cls.W(I))
+            print('Силы основного сопротивления движению постоянны W(I)=CONST:', cls.W)
+
+            if cls.M21 == 0:
+                return
+            
+            print('Введите MPT(I):')
+            cls.MPT = cls.FORMI()
+
+            for I in range(1, cls.N0+1):
+                cls.W1.set_elem(I, 0.0)
+
+            for I in range(1, cls.N+1):
+                if cls.M1(I) < cls.E or cls.MPT(I) <= cls.E:
+                    continue
+                cls.W1.set_elem(I, cls.W(I))
+                cls.W.set_elem(I, 0)
+            
+        else:
+            # label 4
+            print('Силы основного сопротивления движению зависят от скорости')
+            print('W0, A0, W01, A11, A22:', cls.W0, cls.A0, cls.W01, cls.A11, cls.A22)
+            cls.M3 = 1
+
+            if cls.M21 == 0:
+                return
+            
+            print('Введите MPT(I):')
+            cls.MPT = cls.FORMI()
+
+            for I in range(1, cls.N0+1):
+                cls.W1.set_elem(I, 0.0)
+
+        return
+
+    @classmethod
+    def PROF3(cls):
+        pass
+
+    @classmethod
+    def PROF1(cls):
+        cls.X.set_elem(1, -cls.Q(1))
+        for I in range(2, cls.N+1):
+            cls.X.set_elem(
+                I,
+                cls.X(I-1) - 0.5*(cls.LB(I-1) + cls.LB(I)),
+            )
+        N12 = 1
+        N13 = cls.NC1 - 1
+        K1 = 1
+        for J in range(1, cls.N+1):
+            cls.XO.set_elem(
+                K1,
+                cls.X(J) + 0.5 * (cls.LB(J) - cls.LB0(K1)),
+            )
+            if cls.NC1 <= 1:
+                break
+            for I in range(N12, N13+1):
+                cls.XO.set_elem(
+                    I+1,
+                    cls.XO(I) - 0.5 * (cls.LB0(I) + cls.LB0(I+1)),
+                )
+            N12 += cls.NC1
+            N13 += cls.NC1
+        # label 116
+        K1 += cls.NC1
+        for I in range(1, cls.N0+1):
+            Y = cls.XO(I)
+            if Y > 0: # else goto 4
+                Y2 = Y
+                for L in range(cls.IND, cls.P3+1, 2): #@@@ TODO: DO 3 L=IND,P3,2
+                    skip_label_4 = False # to make GOTO 11
+                    Y1 = Y - cls.A(L)
+                    if Y1 >= 0: # else goto 5
+                        Y2 = Y - cls.A(L+1)
+                        if Y2 > 0:
+                            continue
+                        J = (L+1)//2 + 1 #@@@ int()? floor? round?
+                        cls.FP.set_elem(
+                            I,
+                            cls.DI(J) * cls.PM0(I),
+                        )
+                        if I < cls.N0:
+                            # goto 11
+                            skip_label_4 = True
+                            break
+                        cls.IND = L
+                        pass #@@@ goto 11
+                    # label 5:
+                    J = (L+1)//2 #@@@ int()?
+                    cls.FP.set_elem(
+                        I,
+                        (cls.DI(J) + Y2/cls.R(J)) * cls.PM0(I),
+                    )
+                # label 3: CONTINUE
+
+            # label 4:
+            if not skip_label_4:
+                cls.FP.set_elem(
+                    I,
+                    cls.DI(1) * cls.PM0(I),
+                )
+        # label 11: CONTINUE
+
+    @classmethod
+    def PARPR(cls):
+        cls.inp('LP1',
+            'Введите (количество изломов профиля?) LP1: ',
+            'int',
+            (1, 1000))
+        if cls.LP1 <= 0:
+            # label 12
+            for I in range(1, cls.N0+1):
+                cls.FP.set_elem(I, 0)
+            print('Движение по площадке (ровная поверхность?)')
+            return
+        
+        # label 19
+        print('Движение по пути ломаного профиля')
+        cls.inp('P',
+            'Введите P: ',
+            'int',
+            (1, 1000))
+        for I in range(1, 400+1):
+            cls.DI.set_elem(I, 0)
+            cls.LP.set_elem(I, 0)
+            cls.R.set_elem(I, 0)
+        P1 = cls.P + 1
+        print('Параметры профиля пути:')
+        for I in range(1, P1+1):
+            cls.inp('tmp_DI',
+                'Введите DI(%s): ' % str(I),
+                'float',
+                (1e-9, 1e+9),
+            )
+            cls.DI.set_elem(I, cls.tmp_DI)
+        for I in range(1, cls.P+1):
+            cls.inp('tmp_LP',
+                'Введите LP(%s): ' % str(I),
+                'float',
+                (1e-9, 1e+9),
+            )
+            cls.LP.set_elem(I, cls.tmp_LP)
+        for I in range(1, cls.P+1):
+            cls.inp('tmp_R',
+                'Введите R(%s): ' % str(I),
+                'float',
+                (1e-9, 1e+9),
+            )
+            cls.R.set_elem(I, cls.tmp_R)
+        L = 1
+        for K in range(1, cls.P+1):
+            Y = cls.DI(K+1) - cls.DI(K)
+            Y1 = abs(cls.R(K))
+            cls.R.set_elem(K, sign(cls.R(K), Y))
+            cls.A.set_elem(L, Y1 * abs(Y))
+            cls.A.set_elem(L+1, cls.LP(K))
+            L += 2
+        print('R:', cls.R)
+        # for I in range(1, cls.P+1):
+        #     print('  [%s] %s' % (I, cls.R(I)))
+        P2 = cls.P + cls.P
+        P3 = P2 - 1
+        for L in range(2, P2+1):
+            cls.A.set_elem(L, cls.A(L) + cls.A(L-1))
+        print('A:', cls.A)
+        # for I in range(1, P2+1):
+        #     print('  [%s] %s' % (I, cls.A(I)))
+        for I in range(1, cls.N0+1):
+            cls.PM0.set_elem(I, cls.M0(I) * const.g)
+        cls.IND = 1
+        return
+
+    @classmethod
+    def PARPRI(cls):
+        ### TODO: very very strange - a lot of new vars...
+
+        cls.inp('HP', 'Введите HP: ', 'float', (1e-9, 1e+9))
+        cls.inp('HPM', 'Введите HPM: ', 'float', (1e-9, 1e+9))
+        cls.inp('HPSM', 'Введите HPSM: ', 'float', (1e-9, 1e+9))
+        cls.inp('NS1', 'Введите NS1: ', 'int', (0, 10000))
+        cls.inp('NS2', 'Введите NS2: ', 'int', (0, 10000))
+        cls.inp('NS3', 'Введите NS3: ', 'int', (0, 10000))
+        cls.inp('NF1', 'Введите NF1: ', 'int', (0, 10000))
+        cls.inp('NF2', 'Введите NF2: ', 'int', (0, 10000))
+        cls.inp('NFT1', 'Введите NFT1: ', 'int', (0, 10000))
+        cls.inp('NFT2', 'Введите NFT2: ', 'int', (0, 10000))
+        cls.inp('NFP1', 'Введите NFP1: ', 'int', (0, 10000))
+        cls.inp('NFP2', 'Введите NFP2: ', 'int', (0, 10000))
+        cls.inp('NVOZ', 'Введите NVOZ: ', 'int', (0, 10000))
+
+        for I in range(1, cls.N+1):
+            cls.V1M.set_elem(I, 0.0)
+            cls.V10.set_elem(I, 0.0)
+            cls.SMAX.set_elem(I, 0.0)
+            cls.S1MAX.set_elem(I, 0.0)
+            cls.S10.set_elem(I, 0.0)
+            cls.S0.set_elem(I, 0.0)
+        
+        cls.TP = cls.HP
+        cls.TPM = cls.HPM
+        cls.TPSM = cls.HPSM
+        cls.SMAX1 = 0.0
+        cls.SO1 = 0.0
+        cls.NL10 = 0
+        cls.NL13 = 0
+        cls.NL17 = 0
+        cls.NL18 = 0
+
+    @classmethod
+    def MAX(cls):
+        Y1 = 0.0
+        Y2 = 0.0
+        NL15 = 0
+        NL16 = 0
+        for I in range(2, cls.N+1):
+            if cls.S(I) >= 0:
+                # label 4
+                if cls.SMAX(I)<= cls.S(I):
+                    # label 8
+                    cls.SMAX.set_elem(I, S(I))
+                # label 7
+                if cls.S(I) > Y1:
+                    Y1 = cls.S(I)
+                    NL15 = I
+            else:
+                #label 5
+                if cls.S0(I) >= cls.S(I):
+                    # label 6
+                    cls.S0.set_elem(I, cls.S(I))
+                # label 10
+                if Y2 > cls.S(I):
+                    # label 13
+                    Y2 = cls.S(I)
+                    NL16 = I
+            # label 12: continue
+        for I in range(1, cls.N+1):
+            if cls.S(I) >= 0:
+                # label 44
+                if cls.S1MAX(I) <= cls.S1(I):
+                    # label 88
+                    cls.S1MAX.set_elem(I, cls.S1(I))
+            else:
+                # label 55
+                if cls.S10(I) >= cls.S1(I):
+                    # label 66
+                    cls.S10.set_elem(I, cls.S1(I))
+            # label 112: continue
+        for I in range(1, cls.N+1):
+            if cls.A2(I+1) >= 0:
+                # label 24
+                if cls.V1M(I) <= cls.A2(I+1):
+                    # label 28
+                    cls.V1M.set_elem(I, cls.A2(I+1))
+
+                pass
+            else:
+                # label 25
+                if cls.V10(I) >= cls.A2(I+1):
+                    # label 26
+                    cls.V10.set_elem(I, cls.A2(I+1))
+        # label 27: continue
+        if cls.SMAX2 < Y1:
+            cls.SMAX2 = Y1
+            cls.NL17 = NL15
+        # label 14
+        if cls.SO2 > Y2:
+            cls.SO2 = Y2
+            cls.NL18 = NL16
+
+
+    @classmethod
+    def are_limits_reached(cls):
+        ret = cls.T >= cls.TK
+        ret |= cls.V(1) <= cls.VK
+        ret |= abs(cls.X(1)) >= cls.XK
+        return ret
+
+
+if __name__ == '__main__':
+
+    # Z = Arr()
+    # for i in range(1, 10+1):
+    #     Z.set_elem(i, i**2)
+    
+    # print("Z:", Z)
+
+    # Train.N = len(Z)
+    # Train.NC1 = 1
+
+    # print("Train.NC1:", Train.NC1)
+    # Z = Train.MINPOR(Z)
+
+    # print("Z (after MINPOR):", Z)
+
+    # exit(1)
+
+
+    # a = Arr()
+    # a.set_elem(1, 10)
+    # a.set_elem(3, 30)
+    # print(a)
+    # for val in a:
+    #     print('>', val)
+    # exit(0)
+
+    # plt.style.use('fivethirtyeight')
+    # plt.plot([1,2,3,4], [10,5,3,2], 'g', label='hop-hop')
+    # plt.legend()
+    # plt.show()
+    # exit(0)
+
+
+    '''
+    def Euler(n = 1000, h = 0.001, x = 0, y = 0):
+        for i in range(n):
+            y += h * function(x, y)
+            x += h
+        return x, y
+    def function(x, y):
+        return x/(y+1) + y/(x+1) # 6 * x**2 + 5 * x * y # функция первой производной
+    xx, yy = list(), list()
+    x, y = 0, 0
+    xx.append(x)
+    yy.append(y)
+    for _ in range(100):
+        x, y = Euler(x=x, y=y)
+        xx.append(x)
+        yy.append(y)
+    print(xx, yy)
+    plt.style.use('fivethirtyeight')
+    plt.plot(xx, yy, 'r', label='euler')
+    plt.legend()
+    plt.show()
+    exit(0)
+    '''
+
+
+    Train.PARVAG1()
+    Train.PARS()
+    Train.PARG()
+    Train.PARVF()
+    Train.VVONU1()
+    Train.PARINT()
+
+    Train.PARPRI() # TODO
+
+    #--------------------
+
+    Train.SPRAV1()
+    Train.RKUT2()
+    Train.SPRAV1()
+
+    while True:
+        Train.INTEGR()
+        # Train.MAX() # TODO
+        if Train.T >= Train.TP:
+            # Train.PRINTR() # TODO: PRINTR
+            pass
+        if Train.are_limits_reached():
+            break
+
+    # Train.VUMAX() # TODO
