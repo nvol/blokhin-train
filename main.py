@@ -204,18 +204,22 @@ class Train:
 
     @classmethod
     def PARVAG1(cls):
-        cls.inp('N0',
+        cls.inp(
+            'N0',
             'Введите число масс в полной системе (N0): ',
             'int',
-            (1, 1000))
+            (1, 1000),
+        )
 
         cls.N = cls.N0 ### не укорачиваем систему! => cls.N = cls.N0, cls.NC1 = 1 ###
 
         ###
-        # cls.inp('N',
+        # cls.inp(
+        #     'N',
         #     'Введите число масс в укороченной системе (число групп) (N): ',
         #     'int',
-        #     (1, cls.N0))
+        #     (1, cls.N0),
+        # )
         # if (cls.N0 % cls.N) != 0:
         #     print('Ошибка: N0 не делится без остатка на N')
         #     exit(0)
@@ -331,20 +335,33 @@ class Train:
     def PARINT(cls):
         cls.inp('H', 'Задайте шаг интегрирования: ', 'float', (1e-9, 1.0))
         cls.H *= cls.NC1
-        cls.inp('PVH',
+        cls.inp(
+            'PVH',
             'Введите 1 для интегрирования с переменным шагом, 0 - с постоянным: ',
             'int',
-            (0, 1))
+            (0, 1),
+        )
         if cls.PVH >= 1:
             cls.NP = cls.N + 2
             cls.NP1 = 2*cls.N + 1
 
-            cls.inp('VGR', 'Задайте верхнюю границу допускаемой погрешности: ', 'float', (1e-9, 1.0))
-            cls.inp('HGR', 'Задайте нижнюю границу допускаемой погрешности: ', 'float', (0.0, cls.VGR))
+            cls.inp(
+                'VGR',
+                'Задайте верхнюю границу допускаемой погрешности: ',
+                'float',
+                (1e-9, 1.0),
+            )
+            cls.inp(
+                'HGR',
+                'Задайте нижнюю границу допускаемой погрешности: ',
+                'float',
+                (0.0, cls.VGR),
+            )
             cls.VGR *= cls.NC1
             cls.HGR *= cls.NC1
             print('Интегрирование с переменным шагом')
-            print('Допускаемая погрешность: верхняя граница = %s, нижняя граница = %s' %
+            print('Допускаемая погрешность: ' + \
+                'верхняя граница = %s, нижняя граница = %s' %
                 (str(cls.VGR), str(cls.HGR)))
         else:
             print('Интегрирование с постоянным шагом %s' % str(cls.H))
@@ -521,7 +538,9 @@ class Train:
     def FVOZM1(cls):
         if cls.LP1 > 0:
             # label 5
-            cls.PROF3() # TODO: будем пока использовать PROF3 (профиль без изгибов), но есть и PROF1
+            # TODO: будем пока использовать PROF3 (профиль без изгибов),
+            #       но есть и PROF1
+            cls.PROF3()
         # label 8
         cls.VNESH4() # call VNESH
         for I in fortran.DO(1, cls.N0):
@@ -557,9 +576,13 @@ class Train:
     @classmethod
     def PARVF(cls): # for VNESH4 version (calls TORM1)
         cls.PARTOR()
-        cls.inp('VOT', 'Введите скорость первого вагона, при которой начинается отпуск (VOT): ',
+        cls.inp(
+            'VOT',
+            'Введите скорость первого вагона, ' + \
+                'при которой начинается отпуск (VOT): ',
             'float',
-            (0.001, 250.0))
+            (0.001, 250.0),
+        )
         cls.PARSP()
         cls.PARPR()
         for I in fortran.DO(1, cls.N0):
@@ -606,27 +629,37 @@ class Train:
                     else:
                         X2 = X1 - cls.TAU2(I)
                         if X2 <= 0:
-                            Z = (cls.K02(I) - cls.K01(I)) / cls.TAU2(I) * X1 + cls.K01(I)
+                            Z = (cls.K02(I) - cls.K01(I)) / \
+                                cls.TAU2(I) * X1 + \
+                                cls.K01(I)
                             jump_to_lbl_32 = True # goto lbl 32
                         else:
                             X3 = X2 - cls.TAU3(I)
                             if X3 <= 0:
-                                Z = (cls.K03(I) - cls.K02(I)) / cls.TAU3(I) * X2 + cls.K02(I)
+                                Z = (cls.K03(I) - cls.K02(I)) / \
+                                    cls.TAU3(I) * X2 + \
+                                    cls.K02(I)
                                 jump_to_lbl_32 = True # goto lbl 32
                             else:
                                 X4 = X3 - cls.TAU4(I)
                                 if X4 <= 0:
-                                    Z = (cls.K04(I) - cls.K03(I)) / cls.TAU4(I) * X3 + cls.K03(I)
+                                    Z = (cls.K04(I) - cls.K03(I)) / \
+                                        cls.TAU4(I) * X3 + \
+                                        cls.K03(I)
                                     jump_to_lbl_32 = True # goto lbl 32
                                 else:
                                     X5 = X4 - cls.TAU5(I)
                                     if X5 <= 0:
-                                        Z = (cls.K05(I) - cls.K04(I)) / cls.TAU5(I) * X4 + cls.K04(I)
+                                        Z = (cls.K05(I) - cls.K04(I)) / \
+                                            cls.TAU5(I) * X4 + \
+                                            cls.K04(I)
                                         jump_to_lbl_32 = True # goto lbl 32
                                     else:
                                         X6 = X5 - cls.TAU6(I)
                                         if X5 <= 0:
-                                            Z = (cls.K06(I) - cls.K05(I)) / cls.TAU6(I) * X5 + cls.K05(I)
+                                            Z = (cls.K06(I) - cls.K05(I)) / \
+                                                cls.TAU6(I) * X5 + \
+                                                cls.K05(I)
                                             jump_to_lbl_32 = True # goto lbl 32
                                         else:
                                             Z = cls.K06(I)
@@ -635,29 +668,36 @@ class Train:
                     if not jump_to_lbl_32:
                         X1 = cls.X - cls.TAU7(I)
                         if X1 <= 0:
-                            Z = cls.K06(I) - ((cls.K06(I) - cls.K07(I)) / cls.TAU7(I) * cls.X)
+                            Z = cls.K06(I) - ((cls.K06(I) - cls.K07(I)) / \
+                                cls.TAU7(I) * cls.X)
                             # goto lbl 32
                         else:
                             X2 = X1 - cls.TAU8(I)
                             if X2 <= 0:
-                                Z = cls.K07(I) - ((cls.K07(I) - cls.K08(I)) / cls.TAU8(I) * X1)
+                                Z = cls.K07(I) - ((cls.K07(I) - cls.K08(I)) / \
+                                    cls.TAU8(I) * X1)
                                 # goto lbl 32
                             else:
                                 X3 = X2 - cls.TAU9(I)
                                 if X3 <= 0:
-                                    Z = cls.K08(I) - ((cls.K08(I) - cls.K09(I)) / cls.TAU9(I) * X2)
+                                    Z = cls.K08(I) - ((cls.K08(I) - cls.K09(I)) / \
+                                        cls.TAU9(I) * X2)
                                     # goto lbl 32
                                 else:
                                     X4 = X3 - cls.TAU10(I)
                                     if X4 <= 0:
-                                        Z = cls.K09(I) - ((cls.K09(I) / cls.TAU10(I)) * X3)
+                                        Z = cls.K09(I) - \
+                                            ((cls.K09(I) / cls.TAU10(I)) * X3)
                                         # goto lbl 32
                                     else:
                                         cls.FT.set_elem(I, 0.0) # lbl 34
                                         continue # goto lbl 80
 
                     # lbl 32
-                    cls.FT.set_elem(I, -cls.C1 * cls.CK * Z * (Z + cls.C2) / (Z + cls.C3) * Y1)
+                    cls.FT.set_elem(
+                        I,
+                        -cls.C1 * cls.CK * Z * (Z + cls.C2) / (Z + cls.C3) * Y1,
+                    )
 
             # after for I
             N12 += cls.NC1
@@ -680,22 +720,38 @@ class Train:
     @classmethod
     def PARTOR(cls):
         TAUOB = Arr()
-        cls.inp('C1', 'Введите коэффициент C1 в тормозной формуле: ', 'float', (1e-9, 1e+9))
-        cls.inp('C2', 'Введите коэффициент C2 в тормозной формуле: ', 'float', (1e-9, 1e+9))
-        cls.inp('C3', 'Введите коэффициент C3 в тормозной формуле: ', 'float', (1e-9, 1e+9))
-        cls.inp('C4', 'Введите коэффициент C4 в тормозной формуле: ', 'float', (1e-9, 1e+9))
-        cls.inp('C5', 'Введите коэффициент C5 в тормозной формуле: ', 'float', (1e-9, 1e+9))
+        cls.inp('C1', 'Введите коэффициент C1 в тормозной формуле: ',
+            'float', (1e-9, 1e+9))
+        cls.inp('C2', 'Введите коэффициент C2 в тормозной формуле: ',
+            'float', (1e-9, 1e+9))
+        cls.inp('C3', 'Введите коэффициент C3 в тормозной формуле: ',
+            'float', (1e-9, 1e+9))
+        cls.inp('C4', 'Введите коэффициент C4 в тормозной формуле: ',
+            'float', (1e-9, 1e+9))
+        cls.inp('C5', 'Введите коэффициент C5 в тормозной формуле: ',
+            'float', (1e-9, 1e+9))
         print('Формирование числа колодок на каждом экипаже (CK):')
         cls.CK = cls.FORMI()
-        cls.inp('NTAU', 'Введите число сечений в поезде для задания параметров тормозных сил NTAU: ', 'int', (0,1000))
+        cls.inp(
+            'NTAU',
+            'Введите число сечений в поезде ' + \
+                'для задания параметров тормозных сил NTAU: ',
+            'int',
+            (0,1000),
+        )
         for I in fortran.DO(1, cls.NTAU):
-            cls.inp('tmp_ITAU',
+            cls.inp(
+                'tmp_ITAU',
                 'Введите номер соответствующего сечения (#%s)' % str(I),
-                'int')
+                'int',
+            )
             cls.ITAU.set_elem(I, cls.tmp_ITAU)
         for I in fortran.DO(1, cls.NTAU):
             for J in fortran.DO(1, cls.ITAU(I)):
-                cls.inp('tmp_YTAU', 'Введите значение параметра в узле #%s,%s YTAU: ' % (I, J))
+                cls.inp(
+                    'tmp_YTAU',
+                    'Введите значение параметра в узле #%s,%s YTAU: ' % (I, J),
+                )
                 cls.YTAU.set_elem((I, J), cls.tmp_YTAU)
         NTAU1 = cls.NTAU - 1
         I = 0
@@ -781,11 +837,16 @@ class Train:
 
     @classmethod
     def PARSP(cls):
-        cls.inp('W0', 'Задайте параметр сил сопротивления W0: ', 'float', (1e-9, 1e+9))
-        cls.inp('A0', 'Задайте параметр сил сопротивления A0: ', 'float', (1e-9, 1e+9))
-        cls.inp('W01', 'Задайте параметр сил сопротивления W01: ', 'float', (1e-9, 1e+9))
-        cls.inp('A11', 'Задайте параметр сил сопротивления A11: ', 'float', (1e-9, 1e+9))
-        cls.inp('A22', 'Задайте параметр сил сопротивления A22: ', 'float', (1e-9, 1e+9))
+        cls.inp('W0', 'Задайте параметр сил сопротивления W0: ',
+            'float', (1e-9, 1e+9))
+        cls.inp('A0', 'Задайте параметр сил сопротивления A0: ',
+            'float', (1e-9, 1e+9))
+        cls.inp('W01', 'Задайте параметр сил сопротивления W01: ',
+            'float', (1e-9, 1e+9))
+        cls.inp('A11', 'Задайте параметр сил сопротивления A11: ',
+            'float', (1e-9, 1e+9))
+        cls.inp('A22', 'Задайте параметр сил сопротивления A22: ',
+            'float', (1e-9, 1e+9))
         if abs(cls.W0) < 0.00001:
             cls.M3 = 0
 
@@ -793,7 +854,10 @@ class Train:
             cls.W = cls.FORMI()
             for I in fortran.DO(1, cls.N0):
                 cls.W.set_elem(I, -cls.W(I))
-            print('Силы основного сопротивления движению постоянны W(I)=CONST:', cls.W)
+            print(
+                'Силы основного сопротивления движению постоянны W(I)=CONST:',
+                cls.W,
+            )
 
             if cls.M21 == 0:
                 return
@@ -813,7 +877,11 @@ class Train:
         else:
             # label 4
             print('Силы основного сопротивления движению зависят от скорости')
-            print('W0, A0, W01, A11, A22:', cls.W0, cls.A0, cls.W01, cls.A11, cls.A22)
+            print('W0:', cls.W0)
+            print('A0:', cls.A0)
+            print('W01:', cls.W01)
+            print('A11:', cls.A11)
+            print('A22:', cls.A22)
             cls.M3 = 1
 
             if cls.M21 == 0:
@@ -898,10 +966,12 @@ class Train:
 
     @classmethod
     def PARPR(cls):
-        cls.inp('LP1',
+        cls.inp(
+            'LP1',
             'Введите (количество изломов профиля?) LP1: ',
             'int',
-            (1, 1000))
+            (1, 1000),
+        )
         if cls.LP1 <= 0:
             # label 12
             for I in fortran.DO(1, cls.N0):
@@ -911,10 +981,7 @@ class Train:
         
         # label 19
         print('Движение по пути ломаного профиля')
-        cls.inp('P',
-            'Введите P: ',
-            'int',
-            (1, 1000))
+        cls.inp('P', 'Введите P: ', 'int', (1, 1000))
         for I in fortran.DO(1, 400): # TODO: why hardcode?
             cls.DI.set_elem(I, 0)
             cls.LP.set_elem(I, 0)
@@ -922,21 +989,24 @@ class Train:
         P1 = cls.P + 1
         print('Параметры профиля пути:')
         for I in fortran.DO(1, P1):
-            cls.inp('tmp_DI',
+            cls.inp(
+                'tmp_DI',
                 'Введите DI(%s): ' % str(I),
                 'float',
                 (1e-9, 1e+9),
             )
             cls.DI.set_elem(I, cls.tmp_DI)
         for I in fortran.DO(1, cls.P):
-            cls.inp('tmp_LP',
+            cls.inp(
+                'tmp_LP',
                 'Введите LP(%s): ' % str(I),
                 'float',
                 (1e-9, 1e+9),
             )
             cls.LP.set_elem(I, cls.tmp_LP)
         for I in fortran.DO(1, cls.P):
-            cls.inp('tmp_R',
+            cls.inp(
+                'tmp_R',
                 'Введите R(%s): ' % str(I),
                 'float',
                 (1e-9, 1e+9),
@@ -1119,4 +1189,4 @@ if __name__ == '__main__':
         if Train.are_limits_reached():
             break
 
-    # Train.VUMAX() # TODO
+    Train.VUMAX()
