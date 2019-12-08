@@ -156,6 +156,18 @@ class Train:
     TPM = 0.0
     HPSM = 0.0
     TPSM = 0.0
+
+    NS1 = 0
+    NS2 = 0
+    NS3 = 0
+    NF1 = 0
+    NF2 = 0
+    NFT1 = 0
+    NFT2 = 0
+    NFP1 = 0
+    NFP2 = 0
+    NVOZ = 0
+
     SMAX1 = 0.0
     SMAX2 = 0.0
 
@@ -163,8 +175,6 @@ class Train:
     SO2 = 0.0
     NL10 = 0
     NL13 = 0
-    #NL15 = 0
-    #NL16 = 0
     NL17 = 0
     NL18 = 0
 
@@ -1069,8 +1079,8 @@ class Train:
     def MAX(cls):
         Y1 = 0.0
         Y2 = 0.0
-        NL15 = 0
-        NL16 = 0
+        NL15 = 0 # local var
+        NL16 = 0 # local var
         for I in fortran.DO(2, cls.N):
             if cls.S(I) >= 0:
                 # label 4
@@ -1154,6 +1164,37 @@ class Train:
             cls.S1MAX.set_elem(I, 0.0)
             cls.S10.set_elem(I, 0.0)
             cls.S0.set_elem(I, 0.0)
+    
+    @classmethod
+    def PRINTR1(cls):
+        # label 4
+        print('T:', cls.T)
+        print('X(1):', cls.X(1))
+        print('VS:', cls.VS)
+        print('V(1):', cls.V(1))
+        print('PT:', cls.PT)
+        print('PST:', cls.PST)
+        print('PR:', cls.PR)
+        print('PSR:', cls.PSR)
+        print('PRT:', cls.PRT)
+        print('P0:', cls.P0)
+        print('S:', cls.S(cls.NS1), cls.S(cls.NS2), cls.S(cls.NS3))
+        print('F:', cls.F(cls.NF1), cls.S(cls.NF2))
+        print('FT:', cls.FT(cls.NFT1), cls.S(cls.NFT2))
+        print('FP:', cls.FP(cls.NFP1), cls.S(cls.NFP2))
+        print('W:', cls.W(cls.NF1))
+        print('FB:', cls.FB(cls.NVOZ))
+        print('SMAX1:', cls.SMAX1)
+        print('NL10:', cls.NL10)
+        print('SO1:', cls.SO1)
+        print('NL13:', cls.NL13)
+
+        cls.TP += cls.HP
+        if cls.T > cls.TPM:
+            # label 6
+            cls.VUMAX()
+            cls.TPM += cls.HPM
+        # label 5
 
     @classmethod
     def are_limits_reached(cls):
