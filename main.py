@@ -188,9 +188,11 @@ class Train:
         # try to get value from initials
         if var_name in initial_dataset:
             setattr(cls, var_name, initial_dataset[var_name])
-            print('Присвоено значение:',
-                  var_name, '=', getattr(cls, var_name),
-                  '@ (%s)' % prompt)
+            print(
+                'Присвоено значение:',
+                var_name, '=', getattr(cls, var_name),
+                '@ (%s)' % prompt,
+            )
             return
 
         entered_value = None
@@ -210,7 +212,7 @@ class Train:
             except Exception as e:
                 print('Простите, непонятно (%s), давайте ещё раз попробуем.' % str(e))
                 continue
-        cls.locals()[var_name] = entered_value
+        setattr(cls, var_name, entered_value)
 
     @classmethod
     def PARVAG1(cls):
@@ -237,25 +239,21 @@ class Train:
 
         cls.NC1 = cls.N0 // cls.N
 
-        print('Введите массы экипажей для полной системы (M0):')
-        cls.M0 = cls.FORMI()
+        cls.FORMI('M0', 'массы экипажей')
         cls.M = deepcopy(cls.M0)
         print('cls.M0:', cls.M0)
         print('cls.M:', cls.M)
-        print('Введите длины экипажей для полной системы (LB0):')
-        cls.LB0 = cls.FORMI()
+        cls.FORMI('LB0', 'длины экипажей')
         cls.LB = deepcopy(cls.LB0)
         print('cls.LB0:', cls.LB0)
         print('cls.LB:', cls.LB)
 
     @classmethod
     def VVONU1(cls):
-        print('Формирование Q(I):')
-        cls.Q = cls.FORMI()
+        cls.FORMI('Q', 'деформации межвагонных соединений')
         ### cls.MINPOR(cls.Q) ###
 
-        print('Формирование V(I):')
-        cls.V = cls.FORMI()
+        cls.FORMI('V', 'скорости движения экипажей')
 
         I = 2 # label 10
         for J in fortran.DO(1, cls.N):
@@ -395,27 +393,75 @@ class Train:
             cls.A4.set_elem(I, 0.0)
 
     @classmethod
-    def FORMI(cls):
+    def FORMI(cls, arr_name, prompt=None):
+        if prompt is None:
+            prompt = arr_name
+        if not hasattr(cls, arr_name):
+            if not arr_name.startswith('tmp_'):
+                raise(AttributeError('class %s has no attribute %s' % (
+                    cls.__name__, arr_name,
+                )))
+        # try to get list object from initials
+        if arr_name in initial_dataset:
+            lst = initial_dataset[arr_name]
+            if type(lst) is not list:
+                raise(ValueError('initial value %s must be the list object' % (
+                    arr_name,
+                )))
+            elif len(lst) < cls.N0:
+                print(
+                    'Предупреждение: ' + \
+                    'во входном массиве %s не хватает данных, ' % (
+                    arr_name,
+                    ) + 'данные будут дополнены по последнему значению в массиве!')
+                while len(lst) < cls.N0:
+                    lst.append(lst[-1])
+            elif len(lst) > cls.N0:
+                print(
+                    'Предупреждение: ' + \
+                    'во входном массиве %s слишком много данных, ' % (
+                    arr_name,
+                    ) + 'массив будет укорочен с конца!')
+                lst = lst[:cls.N0]
+
+            setattr(cls, arr_name, Arr(lst=lst))
+            print(
+                'Присвоено значение:',
+                arr_name, '=', getattr(cls, arr_name),
+                '@ (%s)' % prompt,
+            )
+            return
+
         RES = Arr()
         NUP, TABL = Arr(), Arr()
         rest = cls.N0
         I = 0
         while True:
             I += 1
-            cls.inp('tmp_NUP', 'NUP(%s): ' % str(I), 'int', (1, rest))
+            cls.inp(
+                'tmp_NUP',
+                'Введите размер %d-й группы экипажей ' % (I, ) + \
+                    'для параметра `%s` (0 - весь остаток): ' % (prompt, ),
+                'int',
+                (0, rest),
+            )
+            if cls.tmp_NUP == 0:
+                cls.tmp_NUP = rest
             NUP.set_elem(I, cls.tmp_NUP)
             rest -= NUP(I)
             if rest == 0:
                 break
         IK = int(sum([i for i in NUP]))
-        NK = len(NUP)
-        print('NK:', NK)
+        NK = len(NUP) # количество групп экипажей
         assert(IK == cls.N0)
-        print('NUP:', NUP) ### TODO: TODEL
         for I in fortran.DO(1, NK):
-            cls.inp('tmp_TABL', 'TABL(%s): ' % str(I))
+            cls.inp(
+                'tmp_TABL',
+                'Введите значение параметра `%s` ' % (prompt, ) + \
+                'для %d-й группы из %d экипажей: ' % (I, NUP(I)),
+            )
             TABL.set_elem(I, cls.tmp_TABL)
-        print('TABL:', TABL) ### TODO: TODEL
+        print('%s:' % arr_name, TABL) # TODO: TODEL?
 
         ret = list()
         for ix, n in NUP.enumerate():
@@ -509,20 +555,15 @@ class Train:
 
     @classmethod
     def PARS(cls):
-        print('Введите жёсткости (K):')
-        cls.K = cls.FORMI()
-        print('Введите зазоры (D):')
-        cls.D = cls.FORMI()
-        print('Введите коэф. BETA:')
-        cls.BETA = cls.FORMI()
-        print('Введите коэф. HETA:')
-        cls.HETA = cls.FORMI()
-        print('Введите жёсткости (KK):')
-        cls.KK = cls.FORMI()
-        print('Введите параметры SM:')
-        cls.SM = cls.FORMI()
-        print('Введите параметры DM:')
-        cls.DM = cls.FORMI()
+        # TODO: что опять начинается? чьи жёсткости?
+        #       что за параметры непонятные?
+        cls.FORMI('K', 'жёсткости K')
+        cls.FORMI('D', 'зазоры')
+        cls.FORMI('BETA', 'коэф. BETA')
+        cls.FORMI('HETA', 'коэф. HETA')
+        cls.FORMI('KK', 'жёсткости KK')
+        cls.FORMI('SM', 'параметры SM')
+        cls.FORMI('DM', 'параметры DM')
         
         if cls.NC1 != 1:
             for I in fortran.DO(1, cls.N0):
@@ -576,6 +617,7 @@ class Train:
                 cls.FT.set_elem(I, 0.0)
         if cls.V(1) > cls.VOT:
             return
+        # ASSUMPTION: видимо, здесь начинается отпуск тормозов
         if cls.IM == 2:
             return
         cls.T0 = cls.T
@@ -740,8 +782,7 @@ class Train:
             'float', (1e-9, 1e+9))
         cls.inp('C5', 'Введите коэффициент C5 в тормозной формуле: ',
             'float', (1e-9, 1e+9))
-        print('Формирование числа колодок на каждом экипаже (CK):')
-        cls.CK = cls.FORMI()
+        cls.FORMI('CK', 'число колодок на каждом экипаже')
         cls.inp(
             'NTAU',
             'Введите число сечений в поезде ' + \
@@ -860,8 +901,7 @@ class Train:
         if abs(cls.W0) < 0.00001:
             cls.M3 = 0
 
-            print('Введите W(I):')
-            cls.W = cls.FORMI()
+            cls.FORMI('W') # TODO: что это такое?
             for I in fortran.DO(1, cls.N0):
                 cls.W.set_elem(I, -cls.W(I))
             print(
@@ -869,11 +909,11 @@ class Train:
                 cls.W,
             )
 
+            # TODO: в else дублирующийся код!!!
             if cls.M21 == 0:
                 return
             
-            print('Введите MPT(I):')
-            cls.MPT = cls.FORMI()
+            cls.FORMI('MPT') # TODO: что за чепуха?
 
             for I in fortran.DO(1, cls.N0):
                 cls.W1.set_elem(I, 0.0)
@@ -894,11 +934,11 @@ class Train:
             print('A22:', cls.A22)
             cls.M3 = 1
 
+            # TODO: дублирующийся код!!! (такой же в if)
             if cls.M21 == 0:
                 return
             
-            print('Введите MPT(I):')
-            cls.MPT = cls.FORMI()
+            cls.FORMI('MPT') # TODO: объясните-ка!
 
             for I in fortran.DO(1, cls.N0):
                 cls.W1.set_elem(I, 0.0)
@@ -980,13 +1020,13 @@ class Train:
             'LP1',
             'Введите (количество изломов профиля?) LP1: ',
             'int',
-            (1, 1000),
+            (0, 1000),
         )
         if cls.LP1 <= 0:
             # label 12
             for I in fortran.DO(1, cls.N0):
                 cls.FP.set_elem(I, 0)
-            print('Движение по площадке (ровная поверхность?)')
+            print('Движение по площадке')
             return
         
         # label 19
