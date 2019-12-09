@@ -197,7 +197,7 @@ class Train:
 
         entered_value = None
         while True:
-            entered_value = input(prompt)
+            entered_value = input('Введите ' + prompt + ': ')
             try:
                 if val_type == 'int':
                     entered_value = int(entered_value)
@@ -218,7 +218,7 @@ class Train:
     def PARVAG1(cls):
         cls.inp(
             'N0',
-            'Введите число масс в полной системе (N0): ',
+            'число масс в полной системе (N0)',
             'int',
             (1, 1000),
         )
@@ -228,7 +228,7 @@ class Train:
         ###
         # cls.inp(
         #     'N',
-        #     'Введите число масс в укороченной системе (число групп) (N): ',
+        #     'число масс в укороченной системе (число групп) (N)',
         #     'int',
         #     (1, cls.N0),
         # )
@@ -345,7 +345,7 @@ class Train:
         cls.H *= cls.NC1
         cls.inp(
             'PVH',
-            'Введите 1 для интегрирования с переменным шагом, 0 - с постоянным: ',
+            '1 для интегрирования с переменным шагом, 0 - с постоянным',
             'int',
             (0, 1),
         )
@@ -432,7 +432,6 @@ class Train:
             )
             return
 
-        RES = Arr()
         NUP, TABL = Arr(), Arr()
         rest = cls.N0
         I = 0
@@ -440,8 +439,8 @@ class Train:
             I += 1
             cls.inp(
                 'tmp_NUP',
-                'Введите размер %d-й группы экипажей ' % (I, ) + \
-                    'для параметра `%s` (0 - весь остаток): ' % (prompt, ),
+                'размер %d-й группы экипажей ' % (I, ) + \
+                    'для параметра `%s` (0 - весь остаток)' % (prompt, ),
                 'int',
                 (0, rest),
             )
@@ -457,32 +456,17 @@ class Train:
         for I in fortran.DO(1, NK):
             cls.inp(
                 'tmp_TABL',
-                'Введите значение параметра `%s` ' % (prompt, ) + \
-                'для %d-й группы из %d экипажей: ' % (I, NUP(I)),
+                'значение параметра `%s` ' % (prompt, ) + \
+                'для %d-й группы из %d экипажей' % (I, NUP(I)),
             )
             TABL.set_elem(I, cls.tmp_TABL)
-        print('%s:' % arr_name, TABL) # TODO: TODEL?
 
         ret = list()
         for ix, n in NUP.enumerate():
             ret += [TABL(ix) for _ in range(n)]
-        return Arr(lst=ret) # TODO: is it list to Arr conversion?
-
-        ###
-        # L = 1
-        # for I in fortran.DO(1, NK):
-        #     while True:
-        #         RES.set_elem(L, TABL(I))
-        #         L += 1
-        #         if L > cls.N0:
-        #             break
-        #         if L > NUP(I):
-        #             break
-        #         NUP.set_elem(I+1, NUP(I+1) + NUP(I))
-        #     if L > cls.N0:
-        #         break
-        # return RES
-        ###
+        arr = Arr(lst=ret)
+        print('%s:' % arr_name, arr)
+        return arr
 
     # @classmethod
     # def MINPOR(cls, TBL_IN):
@@ -557,14 +541,34 @@ class Train:
     def PARS(cls):
         # TODO: что опять начинается? чьи жёсткости?
         #       что за параметры непонятные?
-        cls.FORMI('K', 'жёсткости K')
-        cls.FORMI('D', 'зазоры')
-        cls.FORMI('BETA', 'коэф. BETA')
-        cls.FORMI('HETA', 'коэф. HETA')
-        cls.FORMI('KK', 'жёсткости KK')
-        cls.FORMI('SM', 'параметры SM')
-        cls.FORMI('DM', 'параметры DM')
+        cls.FORMI('K', 'жёсткости соединений при нагружении')
+        cls.FORMI('D', 'зазоры в межвагонных соединениях')
+        cls.FORMI(
+            'BETA',
+            'коэф. вязкого сопротивления деформированию конструкции кузова (BETA)',
+        )
+        cls.FORMI(
+            'HETA',
+            'коэф. поглощения энергии фрикционным поглощающим аппаратом (HETA)',
+        )
+        cls.FORMI(
+            'KK',
+            'продольные жёсткости кузова экипажа',
+        )
+        # cls.FORMI(
+        #     'SM',
+        #     'параметры SM',
+        # ) # TODO: зачем? если можно получить из K и DM
+
+        cls.FORMI(
+            'DM',
+            'абс. деформации соединений, при которых поглощающие аппараты закрываются',
+        )
         
+        # TODO: допустима ли данная самодеятельность? уточнить
+        for I in fortran.DO(1, cls.N0):
+            cls.SM.set_elem(I, cls.K(I) * cls.DM(I))
+
         if cls.NC1 != 1:
             for I in fortran.DO(1, cls.N0):
                 pass ### ... = MINPOR() ###
@@ -630,8 +634,8 @@ class Train:
         cls.PARTOR()
         cls.inp(
             'VOT',
-            'Введите скорость первого вагона, ' + \
-                'при которой начинается отпуск (VOT): ',
+            'скорость первого вагона, ' + \
+                'при которой начинается отпуск (VOT)',
             'float',
             (0.001, 250.0),
         )
@@ -772,28 +776,28 @@ class Train:
     @classmethod
     def PARTOR(cls):
         TAUOB = Arr()
-        cls.inp('C1', 'Введите коэффициент C1 в тормозной формуле: ',
+        cls.inp('C1', 'коэффициент C1 в тормозной формуле',
             'float', (1e-9, 1e+9))
-        cls.inp('C2', 'Введите коэффициент C2 в тормозной формуле: ',
+        cls.inp('C2', 'коэффициент C2 в тормозной формуле',
             'float', (1e-9, 1e+9))
-        cls.inp('C3', 'Введите коэффициент C3 в тормозной формуле: ',
+        cls.inp('C3', 'коэффициент C3 в тормозной формуле',
             'float', (1e-9, 1e+9))
-        cls.inp('C4', 'Введите коэффициент C4 в тормозной формуле: ',
+        cls.inp('C4', 'коэффициент C4 в тормозной формуле',
             'float', (1e-9, 1e+9))
-        cls.inp('C5', 'Введите коэффициент C5 в тормозной формуле: ',
+        cls.inp('C5', 'коэффициент C5 в тормозной формуле',
             'float', (1e-9, 1e+9))
         cls.FORMI('CK', 'число колодок на каждом экипаже')
         cls.inp(
             'NTAU',
-            'Введите число сечений в поезде ' + \
-                'для задания параметров тормозных сил NTAU: ',
+            'число сечений в поезде ' + \
+                'для задания параметров тормозных сил NTAU',
             'int',
             (0,1000),
         )
         for I in fortran.DO(1, cls.NTAU):
             cls.inp(
                 'tmp_ITAU',
-                'Введите номер соответствующего сечения (#%s)' % str(I),
+                'номер соответствующего сечения (#%s)' % str(I),
                 'int',
             )
             cls.ITAU.set_elem(I, cls.tmp_ITAU)
@@ -801,7 +805,7 @@ class Train:
             for J in fortran.DO(1, cls.ITAU(I)):
                 cls.inp(
                     'tmp_YTAU',
-                    'Введите значение параметра в узле #%s,%s YTAU: ' % (I, J),
+                    'значение параметра в узле #%s,%s YTAU' % (I, J),
                 )
                 cls.YTAU.set_elem((I, J), cls.tmp_YTAU)
         NTAU1 = cls.NTAU - 1
@@ -1018,7 +1022,7 @@ class Train:
     def PARPR(cls):
         cls.inp(
             'LP1',
-            'Введите (количество изломов профиля?) LP1: ',
+            'количество изломов профиля (LP1)',
             'int',
             (0, 1000),
         )
@@ -1031,7 +1035,7 @@ class Train:
         
         # label 19
         print('Движение по пути ломаного профиля')
-        cls.inp('P', 'Введите P: ', 'int', (1, 1000))
+        cls.inp('P', 'P', 'int', (1, 1000))
         for I in fortran.DO(1, 400): # TODO: why hardcode?
             cls.DI.set_elem(I, 0)
             cls.LP.set_elem(I, 0)
@@ -1041,7 +1045,7 @@ class Train:
         for I in fortran.DO(1, P1):
             cls.inp(
                 'tmp_DI',
-                'Введите DI(%s): ' % str(I),
+                'DI(%s)' % str(I),
                 'float',
                 (1e-9, 1e+9),
             )
@@ -1049,7 +1053,7 @@ class Train:
         for I in fortran.DO(1, cls.P):
             cls.inp(
                 'tmp_LP',
-                'Введите LP(%s): ' % str(I),
+                'LP(%s)' % str(I),
                 'float',
                 (1e-9, 1e+9),
             )
@@ -1057,7 +1061,7 @@ class Train:
         for I in fortran.DO(1, cls.P):
             cls.inp(
                 'tmp_R',
-                'Введите R(%s): ' % str(I),
+                'R(%s)' % str(I),
                 'float',
                 (1e-9, 1e+9),
             )
@@ -1083,19 +1087,19 @@ class Train:
 
     @classmethod
     def PARPRI(cls):
-        cls.inp('HP', 'Введите HP: ', 'float', (1e-9, 1e+9))
-        cls.inp('HPM', 'Введите HPM: ', 'float', (1e-9, 1e+9))
-        cls.inp('HPSM', 'Введите HPSM: ', 'float', (1e-9, 1e+9))
-        cls.inp('NS1', 'Введите NS1: ', 'int', (0, 10000))
-        cls.inp('NS2', 'Введите NS2: ', 'int', (0, 10000))
-        cls.inp('NS3', 'Введите NS3: ', 'int', (0, 10000))
-        cls.inp('NF1', 'Введите NF1: ', 'int', (0, 10000))
-        cls.inp('NF2', 'Введите NF2: ', 'int', (0, 10000))
-        cls.inp('NFT1', 'Введите NFT1: ', 'int', (0, 10000))
-        cls.inp('NFT2', 'Введите NFT2: ', 'int', (0, 10000))
-        cls.inp('NFP1', 'Введите NFP1: ', 'int', (0, 10000))
-        cls.inp('NFP2', 'Введите NFP2: ', 'int', (0, 10000))
-        cls.inp('NVOZ', 'Введите NVOZ: ', 'int', (0, 10000))
+        cls.inp('HP', 'HP', 'float', (1e-9, 1e+9))
+        cls.inp('HPM', 'HPM', 'float', (1e-9, 1e+9))
+        cls.inp('HPSM', 'HPSM', 'float', (1e-9, 1e+9))
+        cls.inp('NS1', 'NS1', 'int', (0, 10000))
+        cls.inp('NS2', 'NS2', 'int', (0, 10000))
+        cls.inp('NS3', 'NS3', 'int', (0, 10000))
+        cls.inp('NF1', 'NF1', 'int', (0, 10000))
+        cls.inp('NF2', 'NF2', 'int', (0, 10000))
+        cls.inp('NFT1', 'NFT1', 'int', (0, 10000))
+        cls.inp('NFT2', 'NFT2', 'int', (0, 10000))
+        cls.inp('NFP1', 'NFP1', 'int', (0, 10000))
+        cls.inp('NFP2', 'NFP2', 'int', (0, 10000))
+        cls.inp('NVOZ', 'NVOZ', 'int', (0, 10000))
 
         for I in fortran.DO(1, cls.N):
             cls.V1M.set_elem(I, 0.0)
