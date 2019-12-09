@@ -16,7 +16,7 @@ class Train:
     N0 = 1  # число экипажей всего
     NC1 = 1 # число экипажей в группе (величина постоянная!)
 
-    X = 0.0 # координата головного экипажа (x1)
+    X = Arr()   # координаты экипажей
     V = Arr()   # скорости экипажей
 
     LB0 = Arr() # длины экипажей
@@ -30,11 +30,15 @@ class Train:
     A3 = Arr()
     A4 = Arr()
     A5 = Arr()
+    A6 = Arr()
+    A7 = Arr()
 
     Q = Arr()   # деформация i-го межвагонного соединения
                 # (или соединения между группами экипажей),
                 # в начальный момент 
     S = Arr()
+
+    LP1 = 0
 
     FB = Arr()
     FP = Arr()
@@ -48,6 +52,7 @@ class Train:
     H = 0.001
     H1 = None
     NU = 1
+    PVH = 0 # интегрирование с постоянным шагом
 
     MU = 1
     M2 = 1
@@ -60,7 +65,7 @@ class Train:
     TP = 0.0    # 
 
     # конечные условия
-    TK = 30.0   # конечное время (максимальное)
+    TK = 2.0    # конечное время (максимальное)
     VK = 0.001  # конечная скорость (минимальная)
     XK = 1000.0 # конечная координата (максимальная)
 
@@ -143,12 +148,12 @@ class Train:
 
     IND = 0
 
-    V1M = 0.0
-    V10 = 0.0
-    SMAX = 0.0
-    S1MAX = 0.0
-    S10 = 0.0
-    S0 = 0.0
+    V1M = Arr()
+    V10 = Arr()
+    SMAX = Arr()
+    S1MAX = Arr()
+    S10 = Arr()
+    S0 = Arr()
 
     HP = 0.0
     TP = 0.0
@@ -273,6 +278,7 @@ class Train:
 
     @classmethod
     def SPRAV1(cls):
+        # print('==== SPRAV1 ====', cls.T)
         cls.T = cls.A1(1)
 
         for I in fortran.DO(1, cls.N):
@@ -466,7 +472,7 @@ class Train:
             ret += [TABL(ix) for _ in range(n)]
         arr = Arr(lst=ret)
         print('%s:' % arr_name, arr)
-        return arr
+        setattr(cls, arr_name, arr)
 
     # @classmethod
     # def MINPOR(cls, TBL_IN):
@@ -669,18 +675,18 @@ class Train:
                     if cls.FT(I) >= 0.0:
                         continue # ~ goto lbl 80
                     jump_to_lbl_32 = False
-                    cls.X = cls.T - cls.T0 - cls.TAUOT(I)
-                if cls.P0 <= 0 or cls.X < 0.0:
-                    # lbl 44
-                    cls.X = cls.T - cls.TT - cls.TAU(I)
-                    if cls.X <= 0:
+                    X = cls.T - cls.T0 - cls.TAUOT(I)
+                if cls.P0 <= 0 or X < 0.0:
+                    # lbl 44: yes! X is local here!
+                    X = cls.T - cls.TT - cls.TAU(I)
+                    if X <= 0:
                         cls.FT.set_elem(I, 0.0)
                         continue # ~ goto lbl 80
 
                     # lbl 29
-                    X1 = cls.X - cls.TAU1(I)
+                    X1 = X - cls.TAU1(I)
                     if X1 <= 0:
-                        Z = cls.K01(I) / cls.TAU1(I) * cls.X
+                        Z = cls.K01(I) / cls.TAU1(I) * X
                         jump_to_lbl_32 = True # goto lbl 32
                     else:
                         X2 = X1 - cls.TAU2(I)
@@ -722,10 +728,10 @@ class Train:
                                             jump_to_lbl_32 = True # goto lbl 32
 
                     if not jump_to_lbl_32:
-                        X1 = cls.X - cls.TAU7(I)
+                        X1 = X - cls.TAU7(I)
                         if X1 <= 0:
                             Z = cls.K06(I) - ((cls.K06(I) - cls.K07(I)) / \
-                                cls.TAU7(I) * cls.X)
+                                cls.TAU7(I) * X)
                             # goto lbl 32
                         else:
                             X2 = X1 - cls.TAU8(I)
@@ -808,32 +814,33 @@ class Train:
                     'значение параметра в узле #%s,%s YTAU' % (I, J),
                 )
                 cls.YTAU.set_elem((I, J), cls.tmp_YTAU)
-        NTAU1 = cls.NTAU - 1
-        I = 0
-        J = 0
-        while True: # lbl 705
-            J += 1
-            while True: # lbl 701
-                I += 1
-                J1 = cls.ITAU(I)
-                J2 = int(cls.ITAU(I+1)) # TODO: maybe 0.0
-                print('I:', I, 'J1:', J1, 'J2:', J2)
-                print('cls.ITAU:', cls.ITAU)
-                for K1 in fortran.DO(J1, J2):
-                    tmp = ( cls.YTAU((I+1, J)) - cls.YTAU((I, J)) ) / (J2 - J1) \
-                        * (K1 - J1) + cls.YTAU((I, J))
-                    TAUOB.set_elem((K1,J), tmp)
-                if I >= NTAU1: # TODO: NTAU1 cases
-                    break
-                # if I < NTAU1:
-                #     continue
-                # else:
-                #     break
-            if J >= 21:
-                break
-            #---
+        if cls.NTAU > 0: # TODO: самодеятельность пошла...
+            NTAU1 = cls.NTAU - 1
             I = 0
-            continue
+            J = 0
+            while True: # lbl 705
+                J += 1
+                while True: # lbl 701
+                    I += 1
+                    J1 = cls.ITAU(I)
+                    J2 = int(cls.ITAU(I+1)) # TODO: maybe 0.0
+                    # print('I:', I, 'J1:', J1, 'J2:', J2)
+                    # print('cls.ITAU:', cls.ITAU)
+                    for K1 in fortran.DO(J1, J2):
+                        tmp = ( cls.YTAU((I+1, J)) - cls.YTAU((I, J)) ) / (J2 - J1) \
+                            * (K1 - J1) + cls.YTAU((I, J))
+                        TAUOB.set_elem((K1,J), tmp)
+                    if I >= NTAU1: # TODO: NTAU1 cases
+                        break
+                    # if I < NTAU1:
+                    #     continue
+                    # else:
+                    #     break
+                if J >= 21:
+                    break
+                #---
+                I = 0
+                continue
         
         for I in fortran.DO(1, cls.N0):
             cls.TAU.set_elem(I, TAUOB((I, 1)))
@@ -1130,7 +1137,7 @@ class Train:
                 # label 4
                 if cls.SMAX(I)<= cls.S(I):
                     # label 8
-                    cls.SMAX.set_elem(I, S(I))
+                    cls.SMAX.set_elem(I, cls.S(I))
                 # label 7
                 if cls.S(I) > Y1:
                     Y1 = cls.S(I)
@@ -1269,8 +1276,7 @@ if __name__ == '__main__':
         Train.INTEGR()
         Train.MAX()
         if Train.T >= Train.TP:
-            # Train.PRINTR1() # TODO: PRINTR1
-            pass
+            Train.PRINTR1()
         if Train.are_limits_reached():
             break
 
