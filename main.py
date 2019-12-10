@@ -49,9 +49,10 @@ class Train:
     W1 = Arr()
     MPT = Arr()
 
-    H = 0.001
+    H = None
     H1 = None
-    NU = 1
+    NU = None
+    
     PVH = 0 # интегрирование с постоянным шагом
 
     MU = 1
@@ -276,6 +277,10 @@ class Train:
         print('V:', cls.V)
         print('Q:', cls.Q)
 
+        print('Внутренний набор данных (Ax):')
+        print('A1:', cls.A1)
+        print('A2:', cls.A2)
+
     @classmethod
     def SPRAV1(cls):
         # print('==== SPRAV1 ====', cls.T)
@@ -397,6 +402,13 @@ class Train:
         for I in fortran.DO(1, cls.NU):
             cls.A3.set_elem(I, 0.0)
             cls.A4.set_elem(I, 0.0)
+
+        print('>>> PARINT:')
+        print('  NU:', cls.NU)
+        print('  A1:', cls.A1)
+        print('  A2:', cls.A2)
+        print('  A3:', cls.A3)
+        print('  A4:', cls.A4)
 
     @classmethod
     def FORMI(cls, arr_name, prompt=None):
@@ -1253,6 +1265,12 @@ class Train:
         ret |= cls.V(1) <= cls.VK
         ret |= abs(cls.X(1)) >= cls.XK
         return ret
+    
+    @classmethod
+    def debug(cls):
+        print('>>> Ax:')
+        print('  A1:', cls.A1)
+        print('  A2:', cls.A2)
 
 
 if __name__ == '__main__':
@@ -1267,17 +1285,23 @@ if __name__ == '__main__':
     Train.PARPRI()
 
     #--------------------
+    print('='*80)
+    print('='*80)
+    print('='*80)
+    #--------------------
 
     Train.SPRAV1()
     Train.RKUT2()
     Train.SPRAV1()
 
-    while True:
+    for _ in range(3): #@@@ while True:
         Train.INTEGR()
         Train.MAX()
         if Train.T >= Train.TP:
             Train.PRINTR1()
         if Train.are_limits_reached():
             break
+        print('- '*40 + '-')
+        Train.debug()
 
     Train.VUMAX()
