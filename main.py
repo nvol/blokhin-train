@@ -54,6 +54,8 @@ class Train:
     NU = None
     
     PVH = 0 # интегрирование с постоянным шагом
+    NP = None
+    NP1 = None
 
     MU = 1
     M2 = 1
@@ -63,7 +65,9 @@ class Train:
     E = 0.0001
 
     T = 0.0     # шкала времени
-    TP = 0.0    # 
+    TP = 0.0    #
+    T0 = 0.0    #
+    TT = 0.0    #
 
     # конечные условия
     TK = 2.0    # конечное время (максимальное)
@@ -143,11 +147,10 @@ class Train:
     P = 0
     PM0 = Arr()
     DI = Arr()
+    XO = Arr()
     LP = Arr()
     R = Arr()
     A = Arr()
-
-    IND = 0
 
     V1M = Arr()
     V10 = Arr()
@@ -393,7 +396,7 @@ class Train:
                 cls.NU += cls.MU
         if cls.M21 != 0:
             for I in fortran.DO(1, cls.N):
-                if cls.M1 > cls.E:
+                if cls.M1(I) > cls.E:
                     cls.NU += 2
                     if cls.IA11(I) > cls.E:
                         cls.NU += 2
@@ -631,7 +634,7 @@ class Train:
         cls.TORM1()
         if cls.M21 != 0:
             for I in fortran.DO(1, cls.N0):
-                if cls.M1 < cls.E:
+                if cls.M1(I) < cls.E:
                     continue
                 if cls.MPT(I) == 0.0:
                     continue
@@ -676,6 +679,7 @@ class Train:
 
     @classmethod
     def TORM1(cls):
+        X = None
         N12 = 1
         N13 = cls.NC1
         for K in fortran.DO(1, cls.N):
@@ -686,7 +690,6 @@ class Train:
                 if cls.P0 > 0:
                     if cls.FT(I) >= 0.0:
                         continue # ~ goto lbl 80
-                    jump_to_lbl_32 = False
                     X = cls.T - cls.T0 - cls.TAUOT(I)
                 if cls.P0 <= 0 or X < 0.0:
                     # lbl 44: yes! X is local here!
@@ -696,6 +699,7 @@ class Train:
                         continue # ~ goto lbl 80
 
                     # lbl 29
+                    jump_to_lbl_32 = False #@@@
                     X1 = X - cls.TAU1(I)
                     if X1 <= 0:
                         Z = cls.K01(I) / cls.TAU1(I) * X
@@ -770,7 +774,7 @@ class Train:
                     # lbl 32
                     cls.FT.set_elem(
                         I,
-                        -cls.C1 * cls.CK * Z * (Z + cls.C2) / (Z + cls.C3) * Y1,
+                        -cls.C1 * cls.CK(I) * Z * (Z + cls.C2) / (Z + cls.C3) * Y1,
                     )
 
             # after for I
@@ -810,7 +814,7 @@ class Train:
             'число сечений в поезде ' + \
                 'для задания параметров тормозных сил NTAU',
             'int',
-            (0,1000),
+            (0, 1000),
         )
         for I in fortran.DO(1, cls.NTAU):
             cls.inp(
@@ -839,9 +843,9 @@ class Train:
                     # print('I:', I, 'J1:', J1, 'J2:', J2)
                     # print('cls.ITAU:', cls.ITAU)
                     for K1 in fortran.DO(J1, J2):
-                        tmp = ( cls.YTAU((I+1, J)) - cls.YTAU((I, J)) ) / (J2 - J1) \
+                        tmp = (cls.YTAU((I+1, J)) - cls.YTAU((I, J))) / (J2 - J1) \
                             * (K1 - J1) + cls.YTAU((I, J))
-                        TAUOB.set_elem((K1,J), tmp)
+                        TAUOB.set_elem((K1, J), tmp)
                     if I >= NTAU1: # TODO: NTAU1 cases
                         break
                     # if I < NTAU1:
@@ -1003,7 +1007,7 @@ class Train:
             Y = cls.XO(I)
             if Y > 0: # else goto 4
                 Y2 = Y
-                for L in fortran.DO(cls.IND, cls.P3, 2): # TODO: DO 3 L=IND,P3,2
+                for L in fortran.DO(cls.tmp_IND, cls.tmp_P3, 2): # TODO: DO 3 L=IND,P3,2
                     skip_label_4 = False # to make GOTO 11
                     Y1 = Y - cls.A(L)
                     if Y1 >= 0: # else goto 5
@@ -1019,7 +1023,7 @@ class Train:
                             # goto 11
                             skip_label_4 = True
                             break
-                        cls.IND = L
+                        cls.tmp_IND = L
                         pass # TODO: goto 11
                     # label 5:
                     J = (L+1)//2 # TODO: int()?
@@ -1095,13 +1099,13 @@ class Train:
             L += 2
         print('R:', cls.R)
         P2 = cls.P + cls.P
-        P3 = P2 - 1
+        cls.tmp_P3 = P2 - 1
         for L in fortran.DO(2, P2):
             cls.A.set_elem(L, cls.A(L) + cls.A(L-1))
         print('A:', cls.A)
         for I in fortran.DO(1, cls.N0):
             cls.PM0.set_elem(I, cls.M0(I) * const.g)
-        cls.IND = 1
+        cls.tmp_IND = 1
         return
 
     @classmethod
@@ -1294,14 +1298,14 @@ if __name__ == '__main__':
     Train.RKUT2()
     Train.SPRAV1()
 
-    for _ in range(3): #@@@ while True:
+    for _ in range(10): #@@@ while True:
         Train.INTEGR()
         Train.MAX()
         if Train.T >= Train.TP:
             Train.PRINTR1()
         if Train.are_limits_reached():
             break
-        print('- '*40 + '-')
         Train.debug()
+        print('- '*40 + '-')
 
     Train.VUMAX()
