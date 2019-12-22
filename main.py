@@ -614,9 +614,9 @@ class Train:
     def FVOZM1(cls):
         if cls.LP1 > 0:
             # label 5
-            # TODO: будем пока использовать PROF3 (профиль без изгибов),
-            #       но есть и PROF1
-            cls.PROF3()
+            # TODO: что у нас с PROF3 (профиль без изгибов)?
+            #       почему там не задействован cls.X?
+            cls.PROF1()
         # label 8
         cls.VNESH4() # call VNESH
         for I in fortran.DO(1, cls.N0):
@@ -974,6 +974,7 @@ class Train:
 
     @classmethod
     def PROF3(cls):
+        # TODO: cls.X меняется только в PROF1!!! как так?
         pass
 
     @classmethod
@@ -1275,6 +1276,8 @@ class Train:
         print('>>> Ax:')
         print('  A1:', cls.A1)
         print('  A2:', cls.A2)
+        print('>>> X, V:')
+        print('  X:', cls.X, '  V:', cls.V)
 
 
 if __name__ == '__main__':
@@ -1298,7 +1301,7 @@ if __name__ == '__main__':
     Train.RKUT2()
     Train.SPRAV1()
 
-    for _ in range(10): #@@@ while True:
+    for _ in range(100): #@@@ while True:
         Train.INTEGR()
         Train.MAX()
         if Train.T >= Train.TP:
