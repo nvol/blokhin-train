@@ -6,6 +6,7 @@
 
 | имя функции | назначение |
 | --- | --- |
+| [MAIN->GLAVN1](doc/fortran/GLAVN1.jpg) | основной цикл программы |
 | PARVAG1 | формирование параметров экипажей |
 | [VVONU1](doc/fortran/VVONU1.jpg) | подготовка начальных условий (вагоны с жёстко закреплёнными грузами) |
 | [SPRAV1](doc/fortran/SPRAV1.jpg) | формирование правых частей дифференциальных уравнений (вагоны с жёстко закреплёнными грузами) |
@@ -15,8 +16,8 @@
 | MINPOR | формирование параметров "укороченной" системы дифференциальных уравнений (TODO: пока не используется, не рассматриваем укороченную систему) |
 | [PRINTR1, PARPRI](doc/fortran/PRINTR1_and_PARPRI.jpg) | печать промежуточных результатов (TODO: написать) |
 | [MAX, VUMAX](doc/fortran/MAX_and_VUMAX.jpg) | выбор и печать наибольших сил и ускорений (TODO: написать) |
-| SILA->APPARAT1, PARS | формирование параметров междувагонных соединений и вычисление сил в автосцепках |
-| SILA1->AMORTOR4, PARG  | силы в соединениях "вагон-груз" не вычисляются, параметры соединений и грузов не вводятся |
+| [SILA->APPARAT1, PARS](doc/fortran/APPARAT1_and_PARS.jpg) | формирование параметров междувагонных соединений и вычисление сил в автосцепках |
+| [SILA1->AMORTOR4, PARG](doc/fortran/AMORTOR4_and_PARG.jpg)  | силы в соединениях "вагон-груз" не вычисляются, параметры соединений и грузов не вводятся |
 | FVOZM1 | организация вычисления и суммирования внешних сил (сопротивления поступательному движению постоянны; движение без остановок) |
 | VNESH4, PARVF | формирование параметров внешних сил и некоторых параметров управления движением поезда; организация вычисления внешних сил, вызванных управлением движением (торможение и отпуск тормозов) |
 | SOPR1, PARSP | формирование параметров сил сопротивления поступательному движению экипажей; вычисление сил сопротивления (силы сопротивления постоянны либо зависят от скорости) |
@@ -35,8 +36,8 @@
 - MINPOR 20л(36)
 - [PRINTR1, PARPRI](doc/fortran/PRINTR1_and_PARPRI.jpg) 21л(38)
 - [MAX, VUMAX](doc/fortran/MAX_and_VUMAX.jpg) 24п(45), 25п(47)
-- SILA->APPARAT1, PARS 26п(49), 27л(50)
-- SILA1->AMORTOR4, PARG 51л(98)
+- [SILA->APPARAT1](doc/fortran/APPARAT1_and_PARS.jpg), [PARS](doc/fortran/APPARAT1_and_PARS.jpg) 26п(49), 27л(50)
+- [SILA1->AMORTOR4, PARG](doc/fortran/AMORTOR4_and_PARG.jpg) 51л(98)
 - FVOZM1 51п(99)
 - VNESH4, PARVF 57п(111)
 - SOPR1, PARSP 59л(114)
@@ -45,7 +46,7 @@
 
 ## Зависимости
 
-**MAIN**  
+[**MAIN**](doc/fortran/GLAVN1.jpg)  
 &#9567;&#9472;**PARVAG1**  
 &#9553;&#9617;&#9617;&#9561;&#9472; FORMI  
 &#9567;&#9472;**PARS**  
@@ -62,21 +63,21 @@
 &#9567;&#9472;[**PARINT**](doc/fortran/INTEGR1_and_PARINT.jpg)  
 &#9567;&#9472;[**PARPRI**](doc/fortran/PRINTR1_and_PARPRI.jpg)  
 &#9567;&#9472;[**SPRAV1**](doc/fortran/SPRAV1.jpg)  
-&#9553;&#9617;&#9617;&#9567;&#9472;APPARAT1  
+&#9553;&#9617;&#9617;&#9567;&#9472;[APPARAT1](doc/fortran/APPARAT1_and_PARS.jpg)  
 &#9553;&#9617;&#9617;&#9561;&#9472;FVOZM1  
 &#9553;&#9617;&#9617;&#9617;&#9617;&#9617;&#9567;&#9472;PROF3  
 &#9553;&#9617;&#9617;&#9617;&#9617;&#9617;&#9561;&#9472;VNESH4  
 &#9553;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9617;&#9561;&#9472;[TORM1](doc/fortran/TORM1_and_PARTOR.jpg)  
 &#9567;&#9472;[**RKUT2**](doc/fortran/RKUT2.jpg)  
 &#9553;&#9617;&#9617;&#9561;&#9472;[SPRAV1](doc/fortran/SPRAV1.jpg)  
-&#9553;&#9617;&#9617;&#9617;&#9617;&#9617;&#9561;&#9472;APPARAT1,FVOZM1,PROF3,VNESH4,[TORM1](doc/fortran/TORM1_and_PARTOR.jpg)  
+&#9553;&#9617;&#9617;&#9617;&#9617;&#9617;&#9561;&#9472;[APPARAT1](doc/fortran/APPARAT1_and_PARS.jpg),FVOZM1,PROF3,VNESH4,[TORM1](doc/fortran/TORM1_and_PARTOR.jpg)  
 &#9567;&#9472;[**SPRAV1**](doc/fortran/SPRAV1.jpg)  
-&#9553;&#9617;&#9617;&#9561;&#9472;APPARAT1,FVOZM1,PROF3,VNESH4,[TORM1](doc/fortran/TORM1_and_PARTOR.jpg)  
+&#9553;&#9617;&#9617;&#9561;&#9472;[APPARAT1](doc/fortran/APPARAT1_and_PARS.jpg),FVOZM1,PROF3,VNESH4,[TORM1](doc/fortran/TORM1_and_PARTOR.jpg)  
 &#9567;&#9472;[**INTEGR**](doc/fortran/INTEGR1_and_PARINT.jpg)  
 &#9553;&#9617;&#9617;&#9567;&#9472;[SPRAV1](doc/fortran/SPRAV1.jpg)  
-&#9553;&#9617;&#9617;&#9553;&#9617;&#9617;&#9561;&#9472;APPARAT1,FVOZM1,PROF3,VNESH4,[TORM1](doc/fortran/TORM1_and_PARTOR.jpg)  
+&#9553;&#9617;&#9617;&#9553;&#9617;&#9617;&#9561;&#9472;[APPARAT1](doc/fortran/APPARAT1_and_PARS.jpg),FVOZM1,PROF3,VNESH4,[TORM1](doc/fortran/TORM1_and_PARTOR.jpg)  
 &#9553;&#9617;&#9617;&#9561;&#9472;[RKUT2](doc/fortran/RKUT2.jpg)  
-&#9553;&#9617;&#9617;&#9617;&#9617;&#9617;&#9561;&#9472;[SPRAV1](doc/fortran/SPRAV1.jpg),APPARAT1,FVOZM1,...  
+&#9553;&#9617;&#9617;&#9617;&#9617;&#9617;&#9561;&#9472;[SPRAV1](doc/fortran/SPRAV1.jpg),[APPARAT1](doc/fortran/APPARAT1_and_PARS.jpg),FVOZM1,...  
 &#9567;&#9472;[**MAX**](doc/fortran/MAX_and_VUMAX.jpg)  
 &#9567;&#9472;[**PRINTR1**](doc/fortran/PRINTR1_and_PARPRI.jpg)  
 &#9553;&#9617;&#9617;&#9561;&#9472;[VUMAX](doc/fortran/MAX_and_VUMAX.jpg)  

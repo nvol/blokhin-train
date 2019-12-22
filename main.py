@@ -321,6 +321,7 @@ class Train:
 
     @classmethod
     def INTEGR(cls):
+        # print("cls.NU:", cls.NU, "cls.NP:", cls.NP, "cls.NP1:", cls.NP1)
         for I in fortran.DO(1, cls.NU):
             cls.A6.set_elem(I, cls.A3(I))
             cls.A3.set_elem(I, cls.A1(I))
@@ -599,6 +600,10 @@ class Train:
             cls.AH.set_elem(I, 0.0)
             cls.AP.set_elem(I, 0.0)
             cls.S.set_elem(I, 0.0)
+
+    @classmethod
+    def AMORTOR4(cls): # SILA1
+        pass
 
     @classmethod
     def PARG(cls): # AMORTOR4 version
