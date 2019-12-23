@@ -58,7 +58,7 @@ class Train:
     NP1 = None
 
     M2 = 1 # TODO: что это?
-    M21 = 0 # TODO: что это?
+    M21 = 0 # 0 - крепление грузов к вагонам жёсткое
     M1 = Arr() # TODO: что это?
     S1 = Arr() # TODO: что это?
     E = 0.0001
@@ -668,7 +668,7 @@ class Train:
         # label 8
         cls.VNESH4() # call VNESH
         for I in fortran.DO(1, cls.N0):
-            D = -fortran.SIGN(1.0, cls.V(I))
+            D = -fortran.SIGN(1.0, cls.V(I)) # TODO: проверить бы..
             cls.FT.set_elem(I, cls.FT(I) * D)
             cls.W.set_elem(I, abs(cls.W(I)) * D)
             cls.FB.set_elem(I, cls.FP(I) + cls.F(I) + cls.FT(I) + cls.W(I))
@@ -1349,7 +1349,7 @@ if __name__ == '__main__':
     Train.RKUT2()
     Train.SPRAV1()
 
-    for _ in range(100): #@@@ while True:
+    for _ in range(1000): #@@@ while True:
         Train.INTEGR()
         Train.MAX()
         if Train.T >= Train.TP:
