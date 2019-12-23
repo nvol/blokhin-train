@@ -99,7 +99,7 @@ class Train:
     PST = 0
     PSR = 0
     PT = 0
-    X1 = Arr()
+    X1 = Arr() # TODO: это кто такое? не попутали часом?
     VS = 0
 
     C1 = 0.0
@@ -523,51 +523,82 @@ class Train:
             L = I + cls.N + 1
             X = None
             if cls.Q(I) < 0:
+                # label 1
                 X = cls.Q(I)
             else:
+                # label 2
                 X = cls.Q(I) - cls.D(I)
+            # label 3
             X1 = abs(X)
             if cls.Q(I) * X <= 0:
+                # label 4
                 cls.S.set_elem(I, 0.0)
-                # continue
+                continue # goto 18 (continue)
             else:
-                if X1 - cls.DM(I) < 0:
+                # label 5
+                if X1 < cls.DM(I):
+                    # label 6
                     if cls.Q(I) * cls.A2(L) >= 0:
+                        # label 9
                         Y1 = cls.K(I) * X
                         Y2 = X * cls.KK(I) + cls.AH(I) + cls.A2(L) * cls.BETA(I)
                         if abs(Y1) < abs(Y2):
+                            # label 11
                             cls.S.set_elem(I, Y1)
                             cls.AP.set_elem(I, Y1 - cls.KK(I) * X)
+                            continue # goto 18 (continue)
                         else:
+                            # label 12
                             cls.S.set_elem(I, Y2)
                             cls.AP.set_elem(I, cls.AH(I))
+                            continue # goto 18 (continue)
                     else:
+                        # label 10
                         Y3 = cls.K(I) * X
                         Y1 = Y3 * cls.HETA(I)
                         Y2 = cls.KK(I) * X + cls.AP(I) + cls.A2(L) * cls.BETA(I)
                         if Y1 * Y2 > 0:
+                            # label 14
                             if abs(Y1) <= abs(Y2):
+                                # label 15
                                 if abs(Y2) <= abs(Y3):
+                                    # label 21
                                     cls.S.set_elem(I, Y2)
                                     cls.AH.set_elem(I, cls.AP(I))
+                                    continue # goto 18 (continue)
                                 else:
+                                    # label 19
                                     cls.S.set_elem(I, Y3)
                                     cls.AP.set_elem(I, Y3 - cls.KK(I) * X)
-                            else: # label 13
-                                cls.S.set_elem(I, Y1)
-                                cls.AH.set_elem(I, Y1 - cls.KK(I) * X)
-                        else: # label 13 again
-                            cls.S.set_elem(I, Y1)
-                            cls.AH.set_elem(I, Y1 - cls.KK(I) * X)
+                                    continue # goto 18 (continue)
+                        # TODO: TODEL
+                        #     else: # label 13
+                        #         cls.S.set_elem(I, Y1)
+                        #         cls.AH.set_elem(I, Y1 - cls.KK(I) * X)
+                        #         continue # goto 18 (continue)
+                        # else:
+                        #     # label 13 again?
+                        #     cls.S.set_elem(I, Y1)
+                        #     cls.AH.set_elem(I, Y1 - cls.KK(I) * X)
+                        #     continue # goto 18 (continue)
+
+                        # label 13
+                        cls.S.set_elem(I, Y1)
+                        cls.AH.set_elem(I, Y1 - cls.KK(I) * X)
+                        continue # goto 18 (continue)
                 else:
+                    # label 7
                     s_new = None
                     if cls.Q(I) >= 0:
+                        # label 17
                         s_new = (X1 - cls.DM(I)) * cls.KK(I) + cls.SM(I) + \
                                 cls.A2(L) * cls.BETA(I)
                     else:
+                        # label 16
                         s_new = -(X1 - cls.DM(I)) * cls.KK(I) - cls.SM(I) + \
                                 cls.A2(L) * cls.BETA(I)
                     cls.S.set_elem(I, s_new)
+            # label 18 (continue)
 
     @classmethod
     def PARS(cls):
@@ -691,7 +722,7 @@ class Train:
         cls.PST = 0
         cls.PSR = 0
         cls.PT = 0
-        cls.X1.set_elem(1, 0.0)
+        cls.X1.set_elem(1, 0.0) # TODO: ничего не попутали?
         cls.VS = 0
 
     @classmethod
