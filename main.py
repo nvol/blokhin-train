@@ -64,7 +64,6 @@ class Train:
     E = 0.0001
 
     T = 0.0     # шкала времени
-    TP = 0.0    #
     T0 = 0.0    #
     TT = 0.0    #
 
@@ -160,7 +159,7 @@ class Train:
 
     HP = 0.0
     TP = 0.0
-    HPM = 0.0
+    HPM = 0.0 # интервал времени, через который происходит обращение к VUMAX()
     TPM = 0.0
     HPSM = 0.0
     TPSM = 0.0
@@ -1275,7 +1274,7 @@ class Train:
         print('SO1:', cls.SO1)
         print('NL13:', cls.NL13)
 
-        cls.TP += cls.HP
+        cls.TP += cls.HP # TODO: что это?
         if cls.T > cls.TPM:
             # label 6
             cls.VUMAX()
