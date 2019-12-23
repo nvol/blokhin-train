@@ -298,7 +298,7 @@ class Train:
 
         for I in fortran.DO(2, cls.N):
             L = I + cls.N + 1
-            cls.A2.set_elem(L, cls.V(I-1)- cls.V(I))
+            cls.A2.set_elem(L, cls.V(I-1) - cls.V(I))
         cls.A2.set_elem(cls.N+2, 0.0 - cls.V(1))
 
         cls.APPARAT1() # SILA
@@ -311,7 +311,7 @@ class Train:
 
     @classmethod
     def RKUT2(cls):
-        for I in fortran.DO(1, cls.NU):
+        for I in fortran.DO(1, cls.NU): # cls.NU вычисляется в PARINT()
             cls.A4.set_elem(I, cls.A2(I))
             cls.A5.set_elem(I, cls.A1(I))
             cls.A1.set_elem(I, cls.A1(I) + cls.A2(I) * cls.H1)
@@ -329,30 +329,40 @@ class Train:
             cls.A5.set_elem(I, cls.A1(I))
             cls.A7.set_elem(I, cls.A4(I))
             cls.A4.set_elem(I, cls.A2(I))
-            cls.SPRAV1()
+        
+        cls.SPRAV1()
+        
         for I in fortran.DO(1, cls.NU):
             cls.A1.set_elem(I, cls.A3(I) + (cls.A4(I) + cls.A2(I)) * cls.H1)
+
         if cls.PVH >= 1:
+            # label 37
             ALFA = 0.0
             for I in fortran.DO(cls.NP, cls.NP1):
                 Y1 = abs((cls.A5(I) - cls.A1(I)) / 6.0)
                 if ALFA < Y1:
                     ALFA = Y1
             if ALFA > cls.HGR:
+                # label 35
                 if ALFA > cls.VGR:
                     cls.H1 = 0.5 * cls.H
                     for I in fortran.DO(1, cls.NU):
                         cls.A1.set_elem(I, cls.A3(I))
                         cls.A2.set_elem(I, cls.A4(I))
                     cls.RKUT2()
+                    # goto 55
             else: # ALFA <= cls.HGR
+                # label 45
                 cls.H1 *= 2.0
                 cls.SPRAV1()
+
                 for I in fortran.DO(1, cls.NU):
                     cls.A3.set_elem(I, cls.A6(I))
                     cls.A4.set_elem(I, cls.A7(I))
                 return
-            cls.SPRAV1()
+
+        # label 55
+        cls.SPRAV1()
 
     @classmethod
     def PARINT(cls):
