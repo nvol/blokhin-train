@@ -57,11 +57,10 @@ class Train:
     NP = None
     NP1 = None
 
-    MU = 1
-    M2 = 1
-    M21 = 0
-    M1 = Arr()
-    S1 = Arr()
+    M2 = 1 # TODO: что это?
+    M21 = 0 # TODO: что это?
+    M1 = Arr() # TODO: что это?
+    S1 = Arr() # TODO: что это?
     E = 0.0001
 
     T = 0.0     # шкала времени
@@ -399,18 +398,20 @@ class Train:
         else:
             print('Интегрирование с постоянным шагом %s' % str(cls.H))
         
+        # label 9
         cls.H1 = 0.5 * cls.H
         cls.NU = 2 * cls.N + 1
-        cls.MU = cls.M2 + 1
+        MU = cls.M2 + 1 # TODO: что такое cls.M2?
         for I in fortran.DO(2, cls.N):
             if cls.IA1(I) != 0.0:
-                cls.NU += cls.MU
+                cls.NU += MU # TODO: что тут за магия?
         if cls.M21 != 0:
             for I in fortran.DO(1, cls.N):
                 if cls.M1(I) > cls.E:
-                    cls.NU += 2
+                    cls.NU += 2 # TODO: опять магия..
                     if cls.IA11(I) > cls.E:
-                        cls.NU += 2
+                        cls.NU += 2 # TODO: и снова магия..
+        # label 630
         cls.A1.set_elem(1, 0.0)
         cls.A2.set_elem(1, 1.0)
         for I in fortran.DO(1, cls.NU):
@@ -600,6 +601,8 @@ class Train:
         # TODO: допустима ли данная самодеятельность? уточнить
         for I in fortran.DO(1, cls.N0):
             cls.SM.set_elem(I, cls.K(I) * cls.DM(I))
+
+        assert(cls.NC1 == 1) # TODO: пока не рассматриваем другие варианты
 
         if cls.NC1 != 1:
             for I in fortran.DO(1, cls.N0):
