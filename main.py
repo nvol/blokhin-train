@@ -5,6 +5,8 @@ from classes import Arr
 from copy import deepcopy
 # import matplotlib.pyplot as plt
 
+PRINT_OUT = False
+
 
 '''
 [__6____] - [__5___] - [__4___] - [__3___] - [__2___] - [__1___],
@@ -38,14 +40,18 @@ class Train:
                 # в начальный момент 
     S = Arr()
 
-    LP1 = 0
+    LP1 = 0     # количество изломов продольного профиля пути,
+                # 0 - горизонтальный профиль
 
-    FB = Arr()
-    FP = Arr()
-    F = Arr()
+    FB = Arr()  # суммарная внешняя сила
+    FP = Arr()  # составляющая силы тяжести от уклона пути
+    F = Arr()   # сила тяги или осаживания,
+                # тормозная сила при электрическом торможении локомотива
+    FT = Arr()  # тормозная сила, действующая на i-й экипаж при
+                # пневматическом торможении
+    W = Arr()   # сила сопротивления поступательному движению экипажа
+                # (равна нулю при M3 = 0)
     F1 = Arr()
-    FT = Arr()
-    W = Arr()
     W1 = Arr()
     MPT = Arr()
 
@@ -140,7 +146,7 @@ class Train:
     A11 = 0.0
     A22 = 0.0
 
-    M3 = 0
+    M3 = 0 # 0 - сопротивление поступательному движению экипажей постоянное
 
     P = 0
     PM0 = Arr()
@@ -1028,11 +1034,13 @@ class Train:
     @classmethod
     def PROF1(cls):
         cls.X.set_elem(1, -cls.Q(1))
+        print('hi from prof1!!! X:', cls.X)
         for I in fortran.DO(2, cls.N):
             cls.X.set_elem(
                 I,
                 cls.X(I-1) - 0.5*(cls.LB(I-1) + cls.LB(I)),
             )
+            print(I, '->', cls.X(I))
         N12 = 1
         N13 = cls.NC1 - 1
         K1 = 1
@@ -1263,15 +1271,16 @@ class Train:
 
     @classmethod
     def VUMAX(cls):
-        print('SMAX:', cls.SMAX)
-        print('S0:', cls.S0)
-        print('Q:', cls.Q)
-        print('S:', cls.S)
-        print('V:', cls.V)
-        print('V1M:', cls.V1M)
-        print('V10:', cls.V10)
-        print('S1MAX:', cls.S1MAX)
-        print('S10:', cls.S10)
+        if PRINT_OUT:
+            print('SMAX:', cls.SMAX)
+            print('S0:', cls.S0)
+            print('Q:', cls.Q)
+            print('S:', cls.S)
+            print('V:', cls.V)
+            print('V1M:', cls.V1M)
+            print('V10:', cls.V10)
+            print('S1MAX:', cls.S1MAX)
+            print('S10:', cls.S10)
 
         for I in fortran.DO(1, cls.N):
             cls.V1M.set_elem(I, 0.0)
@@ -1283,27 +1292,28 @@ class Train:
     
     @classmethod
     def PRINTR1(cls):
-        # label 4
-        print('T:', cls.T)
-        print('X(1):', cls.X(1))
-        print('VS:', cls.VS)
-        print('V(1):', cls.V(1))
-        print('PT:', cls.PT)
-        print('PST:', cls.PST)
-        print('PR:', cls.PR)
-        print('PSR:', cls.PSR)
-        print('PRT:', cls.PRT)
-        print('P0:', cls.P0)
-        print('S:', cls.S(cls.NS1), cls.S(cls.NS2), cls.S(cls.NS3))
-        print('F:', cls.F(cls.NF1), cls.S(cls.NF2))
-        print('FT:', cls.FT(cls.NFT1), cls.S(cls.NFT2))
-        print('FP:', cls.FP(cls.NFP1), cls.S(cls.NFP2))
-        print('W:', cls.W(cls.NF1))
-        print('FB:', cls.FB(cls.NVOZ))
-        print('SMAX1:', cls.SMAX1)
-        print('NL10:', cls.NL10)
-        print('SO1:', cls.SO1)
-        print('NL13:', cls.NL13)
+        if PRINT_OUT:
+            # label 4
+            print('T:', cls.T)
+            print('X(1):', cls.X(1))
+            print('VS:', cls.VS)
+            print('V(1):', cls.V(1))
+            print('PT:', cls.PT)
+            print('PST:', cls.PST)
+            print('PR:', cls.PR)
+            print('PSR:', cls.PSR)
+            print('PRT:', cls.PRT)
+            print('P0:', cls.P0)
+            print('S:', cls.S(cls.NS1), cls.S(cls.NS2), cls.S(cls.NS3))
+            print('F:', cls.F(cls.NF1), cls.S(cls.NF2))
+            print('FT:', cls.FT(cls.NFT1), cls.S(cls.NFT2))
+            print('FP:', cls.FP(cls.NFP1), cls.S(cls.NFP2))
+            print('W:', cls.W(cls.NF1))
+            print('FB:', cls.FB(cls.NVOZ))
+            print('SMAX1:', cls.SMAX1)
+            print('NL10:', cls.NL10)
+            print('SO1:', cls.SO1)
+            print('NL13:', cls.NL13)
 
         cls.TP += cls.HP # TODO: что это?
         if cls.T > cls.TPM:
@@ -1321,11 +1331,11 @@ class Train:
     
     @classmethod
     def debug(cls):
-        print('>>> Ax:')
-        print('  A1:', cls.A1)
-        print('  A2:', cls.A2)
-        print('>>> X, V:')
-        print('  X:', cls.X, '  V:', cls.V)
+        # print('>>> Ax:')
+        # print('  A1:', cls.A1)
+        # print('  A2:', cls.A2)
+        # print('>>> X, V:')
+        print(' T:', cls.T, ' X:', cls.X, ' V:', cls.V, ' FB:', cls.FB)
 
 
 if __name__ == '__main__':
