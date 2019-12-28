@@ -3,9 +3,11 @@ import const
 from init import initial_dataset
 from classes import Arr
 from copy import deepcopy
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 PRINT_OUT = False
+CALC_ALL_COORDS = False
+PLOT_OUT = not False
 
 
 '''
@@ -74,14 +76,14 @@ class Train:
     TT = 0.0    #
 
     # конечные условия
-    TK = 2.0    # конечное время (максимальное)
+    TK = 120.0    # конечное время (максимальное)
     VK = 0.001  # конечная скорость (минимальная)
     XK = 1000.0 # конечная координата (максимальная)
 
     VGR = 0.0013
     HGR = 0.0
 
-    VOT = 0.0 # скорость первого вагона, при которой начинается отпуск
+    VOT = 1.0 # скорость первого вагона, при которой начинается отпуск
 
     IA = Arr()
     IA1 = Arr()
@@ -97,14 +99,19 @@ class Train:
     SM = Arr()
     DM = Arr()
 
-    IM = 1
-    P0 = 0
-    PR = 0
-    PR1 = 0
-    PRT = 0
-    PST = 0
-    PSR = 0
-    PT = 0
+    IM = 0  # какой-то флаг, отвечающий за торможение;
+            # (ему присваивается 1 в PARVF, а потом
+            # присваивается 2 во VNESH4 после отпуска)
+    PR1 = None  # признак включения электрического тормоза
+    PT = None   # признак тяги
+    PR = None   # признак рекуперации
+    PRT = None  # признак торможения
+
+    # прочие пока что неиспользуемые признаки
+    PST = None
+    PSR = None
+    P0 = None
+
     X1 = Arr() # TODO: это кто такое? не попутали часом?
     VS = 0
 
@@ -431,7 +438,9 @@ class Train:
         print('  A4:', cls.A4)
 
     @classmethod
-    def FORMI(cls, arr_name, prompt=None):
+    def FORMI(cls, arr_name, prompt=None, range_till=None):
+        if range_till is None:
+            range_till = cls.N0
         if prompt is None:
             prompt = arr_name
         if not hasattr(cls, arr_name):
@@ -446,21 +455,21 @@ class Train:
                 raise(ValueError('initial value %s must be the list object' % (
                     arr_name,
                 )))
-            elif len(lst) < cls.N0:
+            elif len(lst) < range_till:
                 print(
                     'Предупреждение: ' + \
                     'во входном массиве %s не хватает данных, ' % (
                     arr_name,
                     ) + 'данные будут дополнены по последнему значению в массиве!')
-                while len(lst) < cls.N0:
+                while len(lst) < range_till:
                     lst.append(lst[-1])
-            elif len(lst) > cls.N0:
+            elif len(lst) > range_till:
                 print(
                     'Предупреждение: ' + \
                     'во входном массиве %s слишком много данных, ' % (
                     arr_name,
                     ) + 'массив будет укорочен с конца!')
-                lst = lst[:cls.N0]
+                lst = lst[:range_till]
 
             setattr(cls, arr_name, Arr(lst=lst))
             print(
@@ -471,7 +480,7 @@ class Train:
             return
 
         NUP, TABL = Arr(), Arr()
-        rest = cls.N0
+        rest = range_till
         I = 0
         while True:
             I += 1
@@ -490,7 +499,7 @@ class Train:
                 break
         IK = int(sum([i for i in NUP]))
         NK = len(NUP) # количество групп экипажей
-        assert(IK == cls.N0)
+        assert(IK == range_till)
         for I in fortran.DO(1, NK):
             cls.inp(
                 'tmp_TABL',
@@ -665,10 +674,29 @@ class Train:
         print('Предельное значение V=E=%s' % str(cls.E))
 
     @classmethod
+    def calc_coordinates(cls):
+        cls.X.set_elem(1, -cls.Q(1))
+        if CALC_ALL_COORDS:
+            # ASSUMPTION:
+            # вот какой смысл вычислять координаты других вагонов,
+            # кроме головного, если эта информация нигде не используется
+            for I in fortran.DO(2, cls.N):
+                cls.X.set_elem(
+                    I,
+                    cls.X(I-1) - 0.5*(cls.LB(I-1) + cls.LB(I)),
+                )
+                print(I, '->', cls.X(I))
+
+    @classmethod
     def FVOZM1(cls):
+        # TODO: и вот тут началась самодеятельность:
+        #       я решил вставить вычисление координат вагонов отдельно
+        #       от вызова процедуры PROF1, а из PROF1 убрать совсем
+        cls.calc_coordinates()
+
         if cls.LP1 > 0:
             # label 5
-            # TODO: что у нас с PROF3 (профиль без изгибов)?
+            # TODO: а что у нас с PROF3 (профиль без изгибов)?
             #       почему там не задействован cls.X?
             cls.PROF1()
         # label 8
@@ -683,7 +711,10 @@ class Train:
 
     @classmethod
     def VNESH4(cls): # VNESH4 version (calls TORM1)
+        # print('~~~~~~~~~ vnesh4 PRT:', cls.PRT, 'P0:', cls.P0)
         if cls.PRT + cls.P0 == 0:
+            # TODO:
+            # is something going wrong?...
             return
         cls.TORM1()
         if cls.M21 != 0:
@@ -694,8 +725,10 @@ class Train:
                     continue
                 cls.F1.set_elem(I, cls.FT(I))
                 cls.FT.set_elem(I, 0.0)
+                # label 2 (continue)
         if cls.V(1) > cls.VOT:
             return
+
         # ASSUMPTION: видимо, здесь начинается отпуск тормозов
         if cls.IM == 2:
             return
@@ -724,7 +757,8 @@ class Train:
         cls.P0 = 0
         cls.PR = 0
         cls.PR1 = 0
-        cls.PRT = 0
+        cls.PRT = 1 # признак торможения по умолчанию установим в 1
+                    # (с самого начала тормозим)
         cls.PST = 0
         cls.PSR = 0
         cls.PT = 0
@@ -733,6 +767,7 @@ class Train:
 
     @classmethod
     def TORM1(cls):
+        # print('hello from torm1')
         X = None
         N12 = 1
         N13 = cls.NC1
@@ -747,6 +782,7 @@ class Train:
                     X = cls.T - cls.T0 - cls.TAUOT(I)
                 if cls.P0 <= 0 or X < 0.0:
                     # lbl 44: yes! X is local here!
+                    # print('~~~~~~~~~ T, TT, TAU:', cls.T, cls.TT, cls.TAU)
                     X = cls.T - cls.TT - cls.TAU(I)
                     if X <= 0:
                         cls.FT.set_elem(I, 0.0)
@@ -826,6 +862,7 @@ class Train:
                                         continue # goto lbl 80
 
                     # lbl 32
+                    # print('~~~~~~~ Y1, Z, cls.C3:', Y1, Z, cls.C3)
                     cls.FT.set_elem(
                         I,
                         -cls.C1 * cls.CK(I) * Z * (Z + cls.C2) / (Z + cls.C3) * Y1,
@@ -870,20 +907,35 @@ class Train:
             'int',
             (0, 1000),
         )
-        for I in fortran.DO(1, cls.NTAU):
-            cls.inp(
-                'tmp_ITAU',
-                'номер соответствующего сечения (#%s)' % str(I),
-                'int',
-            )
-            cls.ITAU.set_elem(I, cls.tmp_ITAU)
-        for I in fortran.DO(1, cls.NTAU):
-            for J in fortran.DO(1, cls.ITAU(I)):
-                cls.inp(
-                    'tmp_YTAU',
-                    'значение параметра в узле #%s,%s YTAU' % (I, J),
-                )
-                cls.YTAU.set_elem((I, J), cls.tmp_YTAU)
+
+        cls.FORMI(
+            'ITAU',
+            'положение (номер экипажа) соответствующего сечения',
+            range_till=cls.NTAU,
+        )
+        # TODO: TODEL
+        # for I in fortran.DO(1, cls.NTAU):
+        #     cls.inp(
+        #         'ITAU',
+        #         'положение (номер экипажа) соответствующего сечения (ITAU(%s))' % str(I),
+        #         'int',
+        #     )
+
+        cls.FORMI(
+            'YTAU',
+            'TODO: непонятные простым сметрным параметры YTAU',
+            range_till=cls.NTAU,
+        )
+        # TODO: TODEL: что-то тут возможно не так...
+        # for I in fortran.DO(1, cls.NTAU):
+        #     for J in fortran.DO(1, cls.ITAU(I)):
+        #         cls.inp(
+        #             'tmp_YTAU',
+        #             'значение параметра в узле #%s,%s YTAU' % (I, J),
+        #         )
+        #         cls.YTAU.set_elem((I, J), cls.tmp_YTAU)
+        # print('~~~~~~~~~ YTAU:', cls.YTAU)
+
         if cls.NTAU > 0: # TODO: самодеятельность пошла...
             NTAU1 = cls.NTAU - 1
             I = 0
@@ -897,6 +949,8 @@ class Train:
                     # print('I:', I, 'J1:', J1, 'J2:', J2)
                     # print('cls.ITAU:', cls.ITAU)
                     for K1 in fortran.DO(J1, J2):
+                        # print('~~~~~~~~~ I, J:', I, J)
+                        # print('~~~~~~~~~ YTAU(I, J):', cls.YTAU((I, J)))
                         tmp = (cls.YTAU((I+1, J)) - cls.YTAU((I, J))) / (J2 - J1) \
                             * (K1 - J1) + cls.YTAU((I, J))
                         TAUOB.set_elem((K1, J), tmp)
@@ -906,7 +960,7 @@ class Train:
                     #     continue
                     # else:
                     #     break
-                if J >= 21:
+                if J >= 21: # TODO: долбаная магия!
                     break
                 #---
                 I = 0
@@ -933,11 +987,14 @@ class Train:
             cls.K06.set_elem(I, TAUOB((I, 18)))
             cls.K07.set_elem(I, TAUOB((I, 19)))
             cls.K08.set_elem(I, TAUOB((I, 20)))
-            cls.K09.set_elem(I, TAUOB((I, 21)))
+            cls.K09.set_elem(I, TAUOB((I, 21))) # TODO: и здесь магическое число 21
         for I in fortran.DO(1, cls.N0):
             cls.FT.set_elem(I, 0.0)
             cls.TT = 0.0
             cls.T0 = 0.0
+        # print('~~~~~~~~~ TAUOB:', TAUOB)
+        # print('~~~~~~~~~ TAU:', cls.TAU)
+
 
     @classmethod
     def SOPR1(cls):
@@ -1033,14 +1090,12 @@ class Train:
 
     @classmethod
     def PROF1(cls):
-        cls.X.set_elem(1, -cls.Q(1))
-        print('hi from prof1!!! X:', cls.X)
-        for I in fortran.DO(2, cls.N):
-            cls.X.set_elem(
-                I,
-                cls.X(I-1) - 0.5*(cls.LB(I-1) + cls.LB(I)),
-            )
-            print(I, '->', cls.X(I))
+        # cls.X.set_elem(1, -cls.Q(1))
+        # for I in fortran.DO(2, cls.N):
+        #     cls.X.set_elem(
+        #         I,
+        #         cls.X(I-1) - 0.5*(cls.LB(I-1) + cls.LB(I)),
+        #     )
         N12 = 1
         N13 = cls.NC1 - 1
         K1 = 1
@@ -1061,6 +1116,7 @@ class Train:
         # label 116
         K1 += cls.NC1
         for I in fortran.DO(1, cls.N0):
+            skip_label_4 = None
             Y = cls.XO(I)
             if Y > 0: # else goto 4
                 Y2 = Y
@@ -1271,16 +1327,15 @@ class Train:
 
     @classmethod
     def VUMAX(cls):
-        if PRINT_OUT:
-            print('SMAX:', cls.SMAX)
-            print('S0:', cls.S0)
-            print('Q:', cls.Q)
-            print('S:', cls.S)
-            print('V:', cls.V)
-            print('V1M:', cls.V1M)
-            print('V10:', cls.V10)
-            print('S1MAX:', cls.S1MAX)
-            print('S10:', cls.S10)
+        print('SMAX:', cls.SMAX)
+        print('S0:', cls.S0)
+        print('Q:', cls.Q)
+        print('S:', cls.S)
+        print('V:', cls.V)
+        print('V1M:', cls.V1M)
+        print('V10:', cls.V10)
+        print('S1MAX:', cls.S1MAX)
+        print('S10:', cls.S10)
 
         for I in fortran.DO(1, cls.N):
             cls.V1M.set_elem(I, 0.0)
@@ -1292,28 +1347,27 @@ class Train:
     
     @classmethod
     def PRINTR1(cls):
-        if PRINT_OUT:
-            # label 4
-            print('T:', cls.T)
-            print('X(1):', cls.X(1))
-            print('VS:', cls.VS)
-            print('V(1):', cls.V(1))
-            print('PT:', cls.PT)
-            print('PST:', cls.PST)
-            print('PR:', cls.PR)
-            print('PSR:', cls.PSR)
-            print('PRT:', cls.PRT)
-            print('P0:', cls.P0)
-            print('S:', cls.S(cls.NS1), cls.S(cls.NS2), cls.S(cls.NS3))
-            print('F:', cls.F(cls.NF1), cls.S(cls.NF2))
-            print('FT:', cls.FT(cls.NFT1), cls.S(cls.NFT2))
-            print('FP:', cls.FP(cls.NFP1), cls.S(cls.NFP2))
-            print('W:', cls.W(cls.NF1))
-            print('FB:', cls.FB(cls.NVOZ))
-            print('SMAX1:', cls.SMAX1)
-            print('NL10:', cls.NL10)
-            print('SO1:', cls.SO1)
-            print('NL13:', cls.NL13)
+        # label 4
+        print('T:', cls.T)
+        print('X(1):', cls.X(1))
+        print('VS:', cls.VS)
+        print('V(1):', cls.V(1))
+        print('PT:', cls.PT)
+        print('PST:', cls.PST)
+        print('PR:', cls.PR)
+        print('PSR:', cls.PSR)
+        print('PRT:', cls.PRT)
+        print('P0:', cls.P0)
+        print('S:', cls.S(cls.NS1), cls.S(cls.NS2), cls.S(cls.NS3))
+        print('F:', cls.F(cls.NF1), cls.S(cls.NF2))
+        print('FT:', cls.FT(cls.NFT1), cls.S(cls.NFT2))
+        print('FP:', cls.FP(cls.NFP1), cls.S(cls.NFP2))
+        print('W:', cls.W(cls.NF1))
+        print('FB:', cls.FB(cls.NVOZ))
+        print('SMAX1:', cls.SMAX1)
+        print('NL10:', cls.NL10)
+        print('SO1:', cls.SO1)
+        print('NL13:', cls.NL13)
 
         cls.TP += cls.HP # TODO: что это?
         if cls.T > cls.TPM:
@@ -1323,7 +1377,7 @@ class Train:
         # label 5
 
     @classmethod
-    def are_limits_reached(cls):
+    def limits_reached(cls):
         ret = cls.T >= cls.TK
         ret |= cls.V(1) <= cls.VK
         ret |= abs(cls.X(1)) >= cls.XK
@@ -1359,14 +1413,40 @@ if __name__ == '__main__':
     Train.RKUT2()
     Train.SPRAV1()
 
-    for _ in range(1000): #@@@ while True:
+    t_to_show = list()
+    x_to_show = list()
+
+    step = 0
+    while True:
+        step += 1
+        # ---
+
         Train.INTEGR()
         Train.MAX()
-        if Train.T >= Train.TP:
+        if Train.T >= Train.TP and PRINT_OUT:
             Train.PRINTR1()
-        if Train.are_limits_reached():
-            break
-        Train.debug()
-        print('- '*40 + '-')
 
-    Train.VUMAX()
+        # data for plotting and debugging
+        if step % 100 == 0 or step == 1 or Train.limits_reached():
+            t_to_show.append(Train.T)
+            x_to_show.append(Train.X(1))
+
+            Train.debug()
+            print('- '*40 + '- (step %d)' % step)
+
+            # - - - - -
+
+            if Train.limits_reached():
+                break
+
+    print('total steps:', step)
+
+    if PRINT_OUT:
+        Train.VUMAX()
+
+    if PLOT_OUT:
+        plt.style.use('fivethirtyeight')
+        plt.plot(t_to_show, x_to_show, 'r', label='coord')
+        plt.legend()
+        plt.show()
+        # exit(0)

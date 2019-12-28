@@ -39,8 +39,12 @@ class Arr:
             ret = None
             try:
                 ret = self.get_elem(ii).get_elem(ij)
-            except:
-                pass
+            except: # Exception as e1:
+                # print('exception-1:', str(e1))
+                try:
+                    ret = self.get_elem(ii)[ij-1]
+                except: # Exception as e2:
+                    pass # print('exception-2:', str(e2))
             return ret
         assert(ix >= 1)
         return self.get_elem(ix)
