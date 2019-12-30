@@ -72,11 +72,11 @@ class Train:
     E = 0.0001
 
     T = 0.0     # шкала времени
-    T0 = 0.0    #
-    TT = 0.0    #
+    TT = 0.0    # время нажатия на тормоза
+    T0 = None   # время отпуска тормозов (присваивается T, когда достигнута скорость VOT)
 
     # конечные условия
-    TK = 120.0    # конечное время (максимальное)
+    TK = 60.0    # конечное время (максимальное)
     VK = 0.001  # конечная скорость (минимальная)
     XK = 1000.0 # конечная координата (максимальная)
 
@@ -197,6 +197,8 @@ class Train:
     NL13 = 0
     NL17 = 0
     NL18 = 0
+
+    Z1 = None # TODO: debug
 
     @classmethod
     def inp(cls, var_name, prompt, val_type=None, limits=None):
@@ -769,12 +771,11 @@ class Train:
     def TORM1(cls):
         # print('hello from torm1')
         X = None
+        Z = None
         N12 = 1
         N13 = cls.NC1
         for K in fortran.DO(1, cls.N):
-            #
-            Y = abs(cls.V(K))
-            Y1 = (Y + cls.C4) / (Y + cls.C5)
+            Y1 = (abs(cls.V(K)) + cls.C4) / (abs(cls.V(K)) + cls.C5)
             for I in fortran.DO(N12, N13):
                 if cls.P0 > 0:
                     if cls.FT(I) >= 0.0:
@@ -863,17 +864,27 @@ class Train:
 
                     # lbl 32
                     # print('~~~~~~~ Y1, Z, cls.C3:', Y1, Z, cls.C3)
+                    PHI = cls.C1 * ((Z + cls.C2) / (Z + cls.C3)) * Y1
                     cls.FT.set_elem(
                         I,
-                        -cls.C1 * cls.CK(I) * Z * (Z + cls.C2) / (Z + cls.C3) * Y1,
+                        -cls.CK(I) * PHI * Z,
                     )
+
+            print('~~~~~~~~~~~~~ K:', K)
+            print('~~~~~~~~~~~~~ Z:', Z, 'Y1:', Y1, 'PHI:', PHI, 'CK(I):', cls.CK(I))
+            print('~~~~~~~~~~~~~ FT:', cls.FT)
 
             # after for I
             N12 += cls.NC1
             N13 += cls.NC1 # lbl 90
 
+            #
+            if K == 1:
+                cls.Z1 = Z
+
         if True not in (cls.FT(I) < 0.0 \
           for I in fortran.DO(1, cls.N0)):
+            print('~~~~~~~~~ WARNING: some FT(I) < 0:', cls.FT)
             cls.P0 = 0
 
         # lbl 692
@@ -987,7 +998,7 @@ class Train:
             cls.K06.set_elem(I, TAUOB((I, 18)))
             cls.K07.set_elem(I, TAUOB((I, 19)))
             cls.K08.set_elem(I, TAUOB((I, 20)))
-            cls.K09.set_elem(I, TAUOB((I, 21))) # TODO: и здесь магическое число 21
+            cls.K09.set_elem(I, TAUOB((I, 21)))
         for I in fortran.DO(1, cls.N0):
             cls.FT.set_elem(I, 0.0)
             cls.TT = 0.0
@@ -1414,7 +1425,7 @@ if __name__ == '__main__':
     Train.SPRAV1()
 
     t_to_show = list()
-    x_to_show = list()
+    f_to_show = list()
 
     step = 0
     while True:
@@ -1429,7 +1440,8 @@ if __name__ == '__main__':
         # data for plotting and debugging
         if step % 100 == 0 or step == 1 or Train.limits_reached():
             t_to_show.append(Train.T)
-            x_to_show.append(Train.X(1))
+            # f_to_show.append(Train.X(1))
+            f_to_show.append(Train.Z1)
 
             Train.debug()
             print('- '*40 + '- (step %d)' % step)
@@ -1446,7 +1458,7 @@ if __name__ == '__main__':
 
     if PLOT_OUT:
         plt.style.use('fivethirtyeight')
-        plt.plot(t_to_show, x_to_show, 'r', label='coord')
+        plt.plot(t_to_show, f_to_show, 'r', label='coord')
         plt.legend()
         plt.show()
         # exit(0)
