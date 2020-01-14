@@ -110,7 +110,7 @@ class Train:
     # прочие пока что неиспользуемые признаки
     PST = None
     PSR = None
-    P0 = None
+    P0 = None # признак отпуска тормоза? (1 - тормоз отпущен? но есть ещё IM = 0...2) # TODO: выяснить!
 
     X1 = Arr() # TODO: это кто такое? не попутали часом?
     VS = 0
@@ -768,107 +768,116 @@ class Train:
         cls.VS = 0
 
     @classmethod
+    def breaks_press(cls, X, I): # returns Z (never None, so just don't call it before breaks are pressed)
+        Z = None
+        # lbl 29 @ X > 0
+        X1 = X - cls.TAU1(I)
+        if X1 <= 0:
+            Z = cls.K01(I) / cls.TAU1(I) * X
+        else:
+            # lbl 200 @ X1 > 0
+            X2 = X1 - cls.TAU2(I)
+            if X2 <= 0:
+                Z = (cls.K02(I) - cls.K01(I)) / \
+                    cls.TAU2(I) * X1 + \
+                    cls.K01(I)
+            else:
+                # lbl 201 @ X2 > 0
+                X3 = X2 - cls.TAU3(I)
+                if X3 <= 0:
+                    Z = (cls.K03(I) - cls.K02(I)) / \
+                        cls.TAU3(I) * X2 + \
+                        cls.K02(I)
+                else:
+                    # lbl 202 @ X3 > 0
+                    X4 = X3 - cls.TAU4(I)
+                    if X4 <= 0:
+                        Z = (cls.K04(I) - cls.K03(I)) / \
+                            cls.TAU4(I) * X3 + \
+                            cls.K03(I)
+                    else:
+                        # lbl 203 @ X4 > 0
+                        X5 = X4 - cls.TAU5(I)
+                        if X5 <= 0:
+                            Z = (cls.K05(I) - cls.K04(I)) / \
+                                cls.TAU5(I) * X4 + \
+                                cls.K04(I)
+                        else:
+                            # lbl 204 @ X5 > 0
+                            X6 = X5 - cls.TAU6(I)
+                            if X6 <= 0:
+                                Z = (cls.K06(I) - cls.K05(I)) / \
+                                    cls.TAU6(I) * X5 + \
+                                    cls.K05(I)
+                            else:
+                                # lbl 50 @ X6 > 0
+                                Z = cls.K06(I)
+        return Z
+
+    @classmethod
+    def breaks_release(cls, X, I): # returns Z (can be None)
+        Z = None
+        X1 = X - cls.TAU7(I)
+        if X1 <= 0:
+            Z = cls.K06(I) - ((cls.K06(I) - cls.K07(I)) / \
+                cls.TAU7(I) * X)
+            # goto lbl 32
+        else:
+            # lbl 7
+            X2 = X1 - cls.TAU8(I)
+            if X2 <= 0:
+                Z = cls.K07(I) - ((cls.K07(I) - cls.K08(I)) / \
+                    cls.TAU8(I) * X1)
+                # goto lbl 32
+            else:
+                # lbl 8
+                X3 = X2 - cls.TAU9(I)
+                if X3 <= 0:
+                    Z = cls.K08(I) - ((cls.K08(I) - cls.K09(I)) / \
+                        cls.TAU9(I) * X2)
+                    # goto lbl 32
+                else:
+                    # lbl 9
+                    X4 = X3 - cls.TAU10(I)
+                    if X4 <= 0:
+                        Z = cls.K09(I) - \
+                            ((cls.K09(I) / cls.TAU10(I)) * X3)
+                        # goto lbl 32
+        return Z
+
+    @classmethod
     def TORM1(cls):
         # print('hello from torm1')
-        X = None
-        Z = None
         N12 = 1
         N13 = cls.NC1
         for K in fortran.DO(1, cls.N):
             Y1 = (abs(cls.V(K)) + cls.C4) / (abs(cls.V(K)) + cls.C5)
             for I in fortran.DO(N12, N13):
-                if cls.P0 > 0:
-                    if cls.FT(I) >= 0.0:
+                X = None
+                Z = None
+                
+                if cls.P0 > 0 and cls.FT(I) >= 0.0:
                         continue # ~ goto lbl 80
-                    X = cls.T - cls.T0 - cls.TAUOT(I)
-                if cls.P0 <= 0 or X < 0.0:
-                    # lbl 44: yes! X is local here!
-                    # print('~~~~~~~~~ T, TT, TAU:', cls.T, cls.TT, cls.TAU)
+                
+                X = cls.T - cls.T0 - cls.TAUOT(I)
+                if cls.P0 > 0 or X >= 0:
+                    # breaks are released!
+                    Z = cls.breaks_release(X, I)
+                else:
+                    # lbl 44
+                    # it's before breaks release => check if breaks are pressed
                     X = cls.T - cls.TT - cls.TAU(I)
-                    if X <= 0:
-                        cls.FT.set_elem(I, 0.0)
-                        continue # ~ goto lbl 80
+                    if X > 0:
+                        # breaks are pressed
+                        Z = cls.breaks_press(X, I)
 
-                    # lbl 29
-                    jump_to_lbl_32 = False #@@@
-                    X1 = X - cls.TAU1(I)
-                    if X1 <= 0:
-                        Z = cls.K01(I) / cls.TAU1(I) * X
-                        jump_to_lbl_32 = True # goto lbl 32
-                    else:
-                        X2 = X1 - cls.TAU2(I)
-                        if X2 <= 0:
-                            Z = (cls.K02(I) - cls.K01(I)) / \
-                                cls.TAU2(I) * X1 + \
-                                cls.K01(I)
-                            jump_to_lbl_32 = True # goto lbl 32
-                        else:
-                            X3 = X2 - cls.TAU3(I)
-                            if X3 <= 0:
-                                Z = (cls.K03(I) - cls.K02(I)) / \
-                                    cls.TAU3(I) * X2 + \
-                                    cls.K02(I)
-                                jump_to_lbl_32 = True # goto lbl 32
-                            else:
-                                X4 = X3 - cls.TAU4(I)
-                                if X4 <= 0:
-                                    Z = (cls.K04(I) - cls.K03(I)) / \
-                                        cls.TAU4(I) * X3 + \
-                                        cls.K03(I)
-                                    jump_to_lbl_32 = True # goto lbl 32
-                                else:
-                                    X5 = X4 - cls.TAU5(I)
-                                    if X5 <= 0:
-                                        Z = (cls.K05(I) - cls.K04(I)) / \
-                                            cls.TAU5(I) * X4 + \
-                                            cls.K04(I)
-                                        jump_to_lbl_32 = True # goto lbl 32
-                                    else:
-                                        X6 = X5 - cls.TAU6(I)
-                                        if X5 <= 0:
-                                            Z = (cls.K06(I) - cls.K05(I)) / \
-                                                cls.TAU6(I) * X5 + \
-                                                cls.K05(I)
-                                            jump_to_lbl_32 = True # goto lbl 32
-                                        else:
-                                            Z = cls.K06(I)
-                                            jump_to_lbl_32 = True # goto lbl 32
-
-                    if not jump_to_lbl_32:
-                        X1 = X - cls.TAU7(I)
-                        if X1 <= 0:
-                            Z = cls.K06(I) - ((cls.K06(I) - cls.K07(I)) / \
-                                cls.TAU7(I) * X)
-                            # goto lbl 32
-                        else:
-                            X2 = X1 - cls.TAU8(I)
-                            if X2 <= 0:
-                                Z = cls.K07(I) - ((cls.K07(I) - cls.K08(I)) / \
-                                    cls.TAU8(I) * X1)
-                                # goto lbl 32
-                            else:
-                                X3 = X2 - cls.TAU9(I)
-                                if X3 <= 0:
-                                    Z = cls.K08(I) - ((cls.K08(I) - cls.K09(I)) / \
-                                        cls.TAU9(I) * X2)
-                                    # goto lbl 32
-                                else:
-                                    X4 = X3 - cls.TAU10(I)
-                                    if X4 <= 0:
-                                        Z = cls.K09(I) - \
-                                            ((cls.K09(I) / cls.TAU10(I)) * X3)
-                                        # goto lbl 32
-                                    else:
-                                        cls.FT.set_elem(I, 0.0) # lbl 34
-                                        continue # goto lbl 80
-
-                    # lbl 32
-                    # print('~~~~~~~ Y1, Z, cls.C3:', Y1, Z, cls.C3)
-                    PHI = cls.C1 * ((Z + cls.C2) / (Z + cls.C3)) * Y1
-                    cls.FT.set_elem(
-                        I,
-                        -cls.CK(I) * PHI * Z,
-                    )
+                # lbl 32
+                # print('~~~~~~~ Y1, Z, cls.C3:', Y1, Z, cls.C3)
+                PHI = cls.C1 * ((Z + cls.C2) / (Z + cls.C3)) * Y1
+                cls.FT.set_elem(
+                    I,
+                    -cls.CK(I) * PHI * Z,
+                )
 
             print('~~~~~~~~~~~~~ K:', K)
             print('~~~~~~~~~~~~~ Z:', Z, 'Y1:', Y1, 'PHI:', PHI, 'CK(I):', cls.CK(I))
