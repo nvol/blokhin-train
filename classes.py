@@ -12,6 +12,8 @@ class Arr:
     def set_elem(self, ix, val):
         if type(ix) is tuple and len(ix) == 2: #TODO: n-dim
             ii, ij = ix
+            assert((ii >= 1) and (ij >= 1))
+            ii -= 1
             try:
                 while ii >= len(self.arr):
                     self.arr.append(Arr())
@@ -20,6 +22,7 @@ class Arr:
                 self.arr[ii] = Arr()
                 self.arr[ii].set_elem(ij, val)
             return self.arr[ii](ij)
+        assert(ix >= 1)
         ix -= 1
         while ix >= len(self.arr):
             self.arr.append(0.0)
@@ -27,6 +30,7 @@ class Arr:
         return self.arr[ix]
     
     def get_elem(self, ix):
+        assert(ix >= 1)
         ix -= 1
         while ix >= len(self.arr):
             self.arr.append(0.0)
