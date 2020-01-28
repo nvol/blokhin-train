@@ -15,6 +15,10 @@ PLOT_OUT = not False
 '''
 
 
+def pull_to_zero(v):
+    return 0.0 if (v < 0.0 and v > 0.00001) else v
+
+
 class Train:
     N = 1   # n - число экипажей или групп (для укороченной системы)
     N0 = 1  # число экипажей всего
@@ -76,9 +80,9 @@ class Train:
     T0 = None   # время отпуска тормозов (присваивается T, когда достигнута скорость VOT)
 
     # конечные условия
-    TK = 60.0    # конечное время (максимальное)
+    TK = 60.0   # конечное время (максимальное)
     VK = 0.001  # конечная скорость (минимальная)
-    XK = 1000.0 # конечная координата (максимальная)
+    XK = 10000.0 # конечная координата (максимальная)
 
     VGR = 0.0013
     HGR = 0.0
@@ -705,7 +709,7 @@ class Train:
         cls.VNESH4() # call VNESH
         for I in fortran.DO(1, cls.N0):
             D = -fortran.SIGN(1.0, cls.V(I)) # TODO: проверить бы..
-            cls.FT.set_elem(I, cls.FT(I) * D)
+            cls.FT.set_elem(I, cls.FT(I) * D) # cls.FT.set_elem(I, pull_to_zero(cls.FT(I) * D))
             cls.W.set_elem(I, abs(cls.W(I)) * D)
             cls.FB.set_elem(I, cls.FP(I) + cls.F(I) + cls.FT(I) + cls.W(I))
         if cls.NC1 != 1:
@@ -769,6 +773,7 @@ class Train:
 
     @classmethod
     def breaks_press(cls, X, I): # returns Z (never None, so just don't call it before breaks are pressed)
+        # print('breaks_press called:', X, I)
         Z = None
         # lbl 29 @ X > 0
         X1 = X - cls.TAU1(I)
@@ -816,6 +821,7 @@ class Train:
 
     @classmethod
     def breaks_release(cls, X, I): # returns Z (can be None)
+        # print('breaks_release called:', X, I)
         Z = None
         X1 = X - cls.TAU7(I)
         if X1 <= 0:
@@ -873,15 +879,22 @@ class Train:
 
                 # lbl 32
                 # print('~~~~~~~ Y1, Z, cls.C3:', Y1, Z, cls.C3)
-                PHI = cls.C1 * ((Z + cls.C2) / (Z + cls.C3)) * Y1
-                cls.FT.set_elem(
-                    I,
-                    -cls.CK(I) * PHI * Z,
-                )
+                # print('Z:', Z, 'I:', I, 'X:', X, 'Y1:', Y1)
 
-            print('~~~~~~~~~~~~~ K:', K)
-            print('~~~~~~~~~~~~~ Z:', Z, 'Y1:', Y1, 'PHI:', PHI, 'CK(I):', cls.CK(I))
-            print('~~~~~~~~~~~~~ FT:', cls.FT)
+                # default case: breaks are not pressed yet
+                PHI = 0.0
+
+                if Z is not None:
+                    # breaks are pressed or released
+                    PHI = cls.C1 * ((Z + cls.C2) / (Z + cls.C3)) * Y1
+                    cls.FT.set_elem(
+                        I,
+                        -cls.CK(I) * PHI * Z, # pull_to_zero(-cls.CK(I) * PHI * Z),
+                    )
+
+                # print('~~~~~~~~~~~~~ K:', K, 'Z:', Z, 'Y1:', Y1, 'PHI:', PHI, 'CK(I):', cls.CK(I))
+
+            # print('~~~~~~~~~~~~~ FT:', cls.FT)
 
             # after for I
             N12 += cls.NC1
@@ -891,9 +904,8 @@ class Train:
             if K == 1:
                 cls.Z1 = Z
 
-        if True not in (cls.FT(I) < 0.0 \
-          for I in fortran.DO(1, cls.N0)):
-            print('~~~~~~~~~ WARNING: some FT(I) < 0:', cls.FT)
+        if True in (cls.FT(I) > 0.0 for I in fortran.DO(1, cls.N0)):
+            print('~~~~~~~~~ WARNING: some FT(I) > 0.0:', cls.FT)
             cls.P0 = 0
 
         # lbl 692
@@ -904,7 +916,7 @@ class Train:
             if cls.M1(I) < cls.E or cls.MPT(I) < cls.E:
                 continue
             cls.F1.set_elem(I, cls.FT(I))
-            cls.FT.set_elem(I, 0)
+            cls.FT.set_elem(I, 0.0)
 
     @classmethod
     def PARTOR(cls):
@@ -1450,6 +1462,7 @@ if __name__ == '__main__':
         if step % 100 == 0 or step == 1 or Train.limits_reached():
             t_to_show.append(Train.T)
             # f_to_show.append(Train.X(1))
+            # f_to_show.append(Train.A1(2)) # speed of the 1st coach
             f_to_show.append(Train.Z1)
 
             Train.debug()
