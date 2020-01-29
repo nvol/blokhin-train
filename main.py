@@ -3,6 +3,7 @@ import const
 from init import initial_dataset
 from classes import Arr
 from copy import deepcopy
+from time import sleep
 import matplotlib.pyplot as plt
 
 PRINT_OUT = False
@@ -80,7 +81,7 @@ class Train:
     T0 = None   # время отпуска тормозов (присваивается T, когда достигнута скорость VOT)
 
     # конечные условия
-    TK = 60.0   # конечное время (максимальное)
+    TK = 150.0   # конечное время (максимальное)
     VK = 0.001  # конечная скорость (минимальная)
     XK = 10000.0 # конечная координата (максимальная)
 
@@ -203,6 +204,8 @@ class Train:
     NL18 = 0
 
     Z1 = None # TODO: debug
+
+    breaks_release_started, breaks_press_started = False, False # TODO: debug
 
     @classmethod
     def inp(cls, var_name, prompt, val_type=None, limits=None):
@@ -708,7 +711,7 @@ class Train:
         # label 8
         cls.VNESH4() # call VNESH
         for I in fortran.DO(1, cls.N0):
-            D = -fortran.SIGN(1.0, cls.V(I)) # TODO: проверить бы..
+            D = 1 # D = -fortran.SIGN(1.0, cls.V(I)) # TODO: проверить бы.. #@@@ труха какая-то!!! вносит смуту! FIXME
             cls.FT.set_elem(I, cls.FT(I) * D) # cls.FT.set_elem(I, pull_to_zero(cls.FT(I) * D))
             cls.W.set_elem(I, abs(cls.W(I)) * D)
             cls.FB.set_elem(I, cls.FP(I) + cls.F(I) + cls.FT(I) + cls.W(I))
@@ -773,7 +776,10 @@ class Train:
 
     @classmethod
     def breaks_press(cls, X, I): # returns Z (never None, so just don't call it before breaks are pressed)
-        # print('breaks_press called:', X, I)
+        if not cls.breaks_press_started:
+            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! breaks_press called:', X, I)
+            cls.breaks_press_started = True
+            sleep(1.0)
         Z = None
         # lbl 29 @ X > 0
         X1 = X - cls.TAU1(I)
@@ -821,7 +827,10 @@ class Train:
 
     @classmethod
     def breaks_release(cls, X, I): # returns Z (can be None)
-        # print('breaks_release called:', X, I)
+        if not cls.breaks_release_started:
+            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! breaks_release called:', X, I)
+            cls.breaks_release_started = True
+            sleep(1.0)
         Z = None
         X1 = X - cls.TAU7(I)
         if X1 <= 0:
@@ -865,8 +874,11 @@ class Train:
                 if cls.P0 > 0 and cls.FT(I) >= 0.0:
                         continue # ~ goto lbl 80
                 
-                X = cls.T - cls.T0 - cls.TAUOT(I)
-                if cls.P0 > 0 or X >= 0:
+                if cls.T0 is not None:
+                    X = cls.T - cls.T0 - cls.TAUOT(I) #@@@ пока так, FIXME
+                    # print('I, T-T0-TAUOT(I), P0:', I, X, cls.P0)
+
+                if cls.T0 is not None and (cls.P0 > 0 or X >= 0): # TODO: можно полностью перейти на проверку T0 is not None
                     # breaks are released!
                     Z = cls.breaks_release(X, I)
                 else:
@@ -891,6 +903,7 @@ class Train:
                         I,
                         -cls.CK(I) * PHI * Z, # pull_to_zero(-cls.CK(I) * PHI * Z),
                     )
+                    # print("cls.FT(I):", cls.FT(I), "I:", I)
 
                 # print('~~~~~~~~~~~~~ K:', K, 'Z:', Z, 'Y1:', Y1, 'PHI:', PHI, 'CK(I):', cls.CK(I))
 
@@ -1022,8 +1035,9 @@ class Train:
             cls.K09.set_elem(I, TAUOB((I, 21)))
         for I in fortran.DO(1, cls.N0):
             cls.FT.set_elem(I, 0.0)
-            cls.TT = 0.0
-            cls.T0 = 0.0
+        
+        # cls.TT = 0.0 #@@@ задаётся в начальных условиях, не надо это делать здесь!
+        # cls.T0 = 0.0 #@@@ не надо тормоза отпускать сразу же, как только стартанули!
         # print('~~~~~~~~~ TAUOB:', TAUOB)
         # print('~~~~~~~~~ TAU:', cls.TAU)
 
@@ -1461,9 +1475,10 @@ if __name__ == '__main__':
         # data for plotting and debugging
         if step % 100 == 0 or step == 1 or Train.limits_reached():
             t_to_show.append(Train.T)
+            f_label = 'скорость [м/с]'
             # f_to_show.append(Train.X(1))
-            # f_to_show.append(Train.A1(2)) # speed of the 1st coach
-            f_to_show.append(Train.Z1)
+            f_to_show.append(Train.A1(2)) # speed of the 1st coach
+            # f_to_show.append(Train.Z1)
 
             Train.debug()
             print('- '*40 + '- (step %d)' % step)
@@ -1480,7 +1495,7 @@ if __name__ == '__main__':
 
     if PLOT_OUT:
         plt.style.use('fivethirtyeight')
-        plt.plot(t_to_show, f_to_show, 'r', label='coord')
+        plt.plot(t_to_show, f_to_show, 'r', label=f_label)
         plt.legend()
         plt.show()
         # exit(0)
