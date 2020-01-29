@@ -1,4 +1,3 @@
-import fortran
 from copy import deepcopy
 from time import sleep
 import matplotlib.pyplot as plt
