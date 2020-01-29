@@ -1,7 +1,4 @@
 import fortran
-import const
-from init import initial_dataset
-from classes import Arr
 from copy import deepcopy
 from time import sleep
 import matplotlib.pyplot as plt
@@ -10,6 +7,118 @@ PRINT_OUT = False
 CALC_ALL_COORDS = False
 PLOT_OUT = not False
 
+# initial dataset
+
+N = 6
+TAU_T1 = 0.2 # время бега тормозной волны до первого экипажа
+TAU_TN = TAU_T1 + 0.4 * N # время бега тормозной волны до N-ного экипажа
+Fbrk1, FbrkN = 13.8, 13.8 # максимальные силы нажатия на колодки в первом и последнем срезе
+
+initial_dataset = {
+    'N0': N,        # количество экипажей (вагонов)
+    'M0': [         # массы экипажей, т? (TODO)
+        18.8,
+        8.6,
+        8.6,
+        8.6,
+        8.6,
+        18.8,
+    ],
+    'LB0': [        # длины экипажей, м
+        28,
+        14,
+        14,
+        14,
+        14,
+        28,
+    ],
+
+    'K': [          # жёсткости соединений при нагружении, кн/м? (TODO)
+        2600.,
+    ],
+    'KK': [         # продольные жёсткости кузова экипажа, н/км? (TODO)
+        8500.,
+    ],
+    'Q': [          # деформации, м
+        0.065,
+    ],
+    'BETA': [       # коэф. вязкого сопротивления деформированию
+        30.0,       # конструкции кузова, н*с/м
+    ],
+    'HETA': [       # 1 минус коэф. поглощения энергии
+        1. - 0.95,  # фрикционным поглощающим аппаратом
+    ],
+    'D': [          # наибольший зазор в соединении
+        0.065,
+    ],
+    'DM': [         # абс. деформации соединений,
+        0.077,      # при которых поглощающие аппараты закрываются
+    ],              # (исчерпывают свой ход)
+
+    'VOT': 1.5,      # скорость, при которой начинается отпуск тормозов
+    'C1': 0.055,
+    'C2': 20.0,
+    'C3': 5.0,
+    'C4': 41.7,
+    'C5': 20.85,
+
+    'CK': [4, ],    # количество колодок на каждом экипаже
+
+    'LP1': 0,       # 0 - профиль пути без изломов
+
+    'NTAU': 2,      # число сечений в поезде для задания
+                    # параметров тормозных сил
+    'ITAU': [1, N], # номера экипажей, где находятся вышеупомянутые сечения
+    'YTAU': [
+        [
+            TAU_T1, # время распространения тормозной волны до первого сечения
+            1.0, 9.0, 990., 991., 992., 993., # длительности нарастания сил нажатия на колодку
+            TAU_T1, # время распространения отпускной волны до первого сечения
+            15.0, 994., 995., 996., # длительности убывания сил нажатия на колодку
+            Fbrk1*0.7, Fbrk1, Fbrk1, Fbrk1, Fbrk1, # силы нажатия до отпуска
+            Fbrk1, 0.0, 0.0, 0.0, # силы нажатия после отпуска
+        ],
+        [
+            TAU_TN, # время распространения тормозной волны до второго сечения
+            1.0, 9.0, 990., 991., 992., 993., # длительности нарастания сил нажатия на колодку
+            TAU_TN, # время распространения отпускной волны до второго сечения
+            15.0, 994., 995., 996., # длительности убывания сил нажатия на колодку
+            FbrkN*0.7, FbrkN, FbrkN, FbrkN, FbrkN, # силы нажатия до отпуска
+            FbrkN, 0.0, 0.0, 0.0, # силы нажатия после отпуска
+        ],
+    ],
+
+    'V': [11.5, ],    # скорости движения экипажей
+
+    'W0': 0.6,
+    'A0': 0.5,
+    'W01': 0.8,
+    'A11': 0.07,
+    'A22': 0.013,
+    'W01': 0.8,
+
+    'H': 0.005, # шаг интегрирования
+    'PVH': 0, # постоянный шаг интегрирования
+
+    'HP': 1.6,
+    'HPM': 80.0,
+    'HPSM': 1.6,
+
+    'NS1': 2,
+    'NS2': 4,
+    'NS3': 5,
+    'NF1': 1,
+    'NF2': 6,
+    'NFT1': 1,
+    'NFT2': 6,
+    'NFP1': 1,
+    'NFP2': 6,
+    'NVOZ': 1,
+}
+
+# main constants
+
+g = 9.81 # m/(s**2)
 
 '''
 [__6____] - [__5___] - [__4___] - [__3___] - [__2___] - [__1___],
@@ -18,6 +127,99 @@ PLOT_OUT = not False
 
 def pull_to_zero(v):
     return 0.0 if (v < 0.0 and v > 0.00001) else v
+
+# fortran specific functions
+
+class fortran:
+    @staticmethod
+    def SIGN(A, B):
+        # returns the value of A with the fortran.sign of B
+        if B < 0:
+            return -A
+        return A
+        # TODO: или всё-таки так?
+        #     return -abs(A)
+        # return abs(A)
+
+    @staticmethod
+    def DO(A, B, STEP=1):
+        # returns iterable like python range
+        return range(A, B+1, STEP)
+
+
+class Arr:
+    def __init__(self, length=None, default_value=None, lst=None):
+        self.arr = list()
+        if lst is not None:
+            self.arr = lst
+        else:
+            if default_value is None:
+                default_value = 0.0
+            if length is not None:
+                self.arr = [default_value for _ in range(length)]
+    
+    def set_elem(self, ix, val):
+        if type(ix) is tuple and len(ix) == 2: #TODO: n-dim
+            ii, ij = ix
+            assert((ii >= 1) and (ij >= 1))
+            ii -= 1
+            try:
+                while ii >= len(self.arr):
+                    self.arr.append(Arr())
+                self.arr[ii].set_elem(ij, val)
+            except:
+                self.arr[ii] = Arr()
+                self.arr[ii].set_elem(ij, val)
+            return self.arr[ii](ij)
+        assert(ix >= 1)
+        ix -= 1
+        while ix >= len(self.arr):
+            self.arr.append(0.0)
+        self.arr[ix] = val
+        return self.arr[ix]
+    
+    def get_elem(self, ix):
+        assert(ix >= 1)
+        ix -= 1
+        while ix >= len(self.arr):
+            self.arr.append(0.0)
+        return self.arr[ix]
+
+    def __call__(self, ix):
+        if type(ix) is tuple and len(ix) == 2:
+            ii, ij = ix
+            assert((ii >= 1) and (ij >= 1))
+            ret = None
+            try:
+                ret = self.get_elem(ii).get_elem(ij)
+            except: # Exception as e1:
+                # print('exception-1:', str(e1))
+                try:
+                    ret = self.get_elem(ii)[ij-1]
+                except: # Exception as e2:
+                    pass # print('exception-2:', str(e2))
+            return ret
+        assert(ix >= 1)
+        return self.get_elem(ix)
+
+    def show(self):
+        print([val for val in self.arr])
+
+    def __repr__(self):
+        return str([val for val in self.arr])
+
+    def __iter__(self):
+        for val in self.arr:
+            yield val
+
+    def enumerate(self):
+        ix = 1
+        for val in self.arr:
+            yield ix, val
+            ix += 1
+    
+    def __len__(self):
+        return len(self.arr)
 
 
 class Train:
