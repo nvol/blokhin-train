@@ -63,8 +63,6 @@ initial_dataset = {
 
     'CK': [4, ],    # количество колодок на каждом экипаже
 
-    'LP1': 0,       # 0 - профиль пути без изломов
-
     'NTAU': 2,      # число сечений в поезде для задания
                     # параметров тормозных сил
     'ITAU': [1, N], # номера экипажей, где находятся вышеупомянутые сечения
@@ -88,6 +86,15 @@ initial_dataset = {
     ],
 
     'V': [60.0/3.6, ],    # скорости движения экипажей
+
+    'LP1': 1,   # 0 - профиль пути без изломов, 1 - с изломами
+    'P': 4,     # количество участков для профиля пути
+    'DI': [0.0,
+            0.0, 0.15, -0.15, 0.0], # P+1 элемент (TODO: а почему так?)
+    'LP': [
+            20.0, 50.0, 50.0, 500.0],
+    'R': [
+            1.0, 1000.0, 1000.0, 3000.0],
 
     'W0': 0.6,
     'A0': 0.5,
@@ -361,13 +368,15 @@ class Train:
 
     M3 = 0 # 0 - сопротивление поступательному движению экипажей постоянное
 
-    P = 0
     PM0 = Arr()
-    DI = Arr()
     XO = Arr()
-    LP = Arr()
-    R = Arr()
     A = Arr()
+
+    # профиль пути
+    P = 0
+    DI = Arr() # уклон
+    LP = Arr() # длина участка в метрах
+    R = Arr()  # радиус скривления в метрах
 
     V1M = Arr()
     V10 = Arr()
@@ -1405,9 +1414,9 @@ class Train:
     def PARPR(cls):
         cls.inp(
             'LP1',
-            'количество изломов профиля (LP1)',
+            'наличие изломов профиля (LP1)',
             'int',
-            (0, 1000),
+            (0, 1),
         )
         if cls.LP1 <= 0:
             # label 12
@@ -1419,36 +1428,39 @@ class Train:
         # label 19
         print('Движение по пути ломаного профиля')
         cls.inp('P', 'P', 'int', (1, 1000))
-        for I in fortran.DO(1, 400): # TODO: why hardcode?
-            cls.DI.set_elem(I, 0)
-            cls.LP.set_elem(I, 0)
-            cls.R.set_elem(I, 0)
+        # for I in fortran.DO(1, 400): # TODO: why hardcode?
+        #     cls.DI.set_elem(I, 0)
+        #     cls.LP.set_elem(I, 0)
+        #     cls.R.set_elem(I, 0)
         P1 = cls.P + 1
         print('Параметры профиля пути:')
-        for I in fortran.DO(1, P1):
-            cls.inp(
-                'tmp_DI',
-                'DI(%s)' % str(I),
-                'float',
-                (1e-9, 1e+9),
-            )
-            cls.DI.set_elem(I, cls.tmp_DI)
-        for I in fortran.DO(1, cls.P):
-            cls.inp(
-                'tmp_LP',
-                'LP(%s)' % str(I),
-                'float',
-                (1e-9, 1e+9),
-            )
-            cls.LP.set_elem(I, cls.tmp_LP)
-        for I in fortran.DO(1, cls.P):
-            cls.inp(
-                'tmp_R',
-                'R(%s)' % str(I),
-                'float',
-                (1e-9, 1e+9),
-            )
-            cls.R.set_elem(I, cls.tmp_R)
+        cls.FORMI('DI', 'уклон', range_till=P1)
+        # for I in fortran.DO(1, P1):
+        #     cls.inp(
+        #         'tmp_DI',
+        #         'DI(%s)' % str(I),
+        #         'float',
+        #         (-1.0, 1.0),
+        #     )
+        #     cls.DI.set_elem(I, cls.tmp_DI)
+        cls.FORMI('LP', 'длина участка', range_till=cls.P)
+        # for I in fortran.DO(1, cls.P):
+        #     cls.inp(
+        #         'tmp_LP',
+        #         'LP(%s)' % str(I),
+        #         'float',
+        #         (1e-9, 1e+9),
+        #     )
+        #     cls.LP.set_elem(I, cls.tmp_LP)
+        cls.FORMI('R', 'радиус скривления участка', range_till=cls.P)
+        # for I in fortran.DO(1, cls.P):
+        #     cls.inp(
+        #         'tmp_R',
+        #         'R(%s)' % str(I),
+        #         'float',
+        #         (1e-9, 1e+9),
+        #     )
+        #     cls.R.set_elem(I, cls.tmp_R)
         L = 1
         for K in fortran.DO(1, cls.P):
             Y = cls.DI(K+1) - cls.DI(K)
@@ -1458,13 +1470,13 @@ class Train:
             cls.A.set_elem(L+1, cls.LP(K))
             L += 2
         print('R:', cls.R)
-        P2 = cls.P + cls.P
+        P2 = cls.P + cls.P # TODO: really p+p?
         cls.tmp_P3 = P2 - 1
         for L in fortran.DO(2, P2):
             cls.A.set_elem(L, cls.A(L) + cls.A(L-1))
         print('A:', cls.A)
         for I in fortran.DO(1, cls.N0):
-            cls.PM0.set_elem(I, cls.M0(I) * const.g)
+            cls.PM0.set_elem(I, cls.M0(I) * g)
         cls.tmp_IND = 1
         return
 
