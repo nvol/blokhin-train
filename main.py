@@ -87,7 +87,7 @@ initial_dataset = {
         ],
     ],
 
-    'V': [11.5, ],    # скорости движения экипажей
+    'V': [60.0/3.6, ],    # скорости движения экипажей
 
     'W0': 0.6,
     'A0': 0.5,
@@ -156,7 +156,7 @@ class Arr:
                 default_value = 0.0
             if length is not None:
                 self.arr = [default_value for _ in range(length)]
-    
+
     def set_elem(self, ix, val):
         if type(ix) is tuple and len(ix) == 2: #TODO: n-dim
             ii, ij = ix
@@ -176,7 +176,7 @@ class Arr:
             self.arr.append(0.0)
         self.arr[ix] = val
         return self.arr[ix]
-    
+
     def get_elem(self, ix):
         assert(ix >= 1)
         ix -= 1
@@ -216,7 +216,7 @@ class Arr:
         for val in self.arr:
             yield ix, val
             ix += 1
-    
+
     def __len__(self):
         return len(self.arr)
 
@@ -245,7 +245,7 @@ class Train:
 
     Q = Arr()   # деформация i-го межвагонного соединения
                 # (или соединения между группами экипажей),
-                # в начальный момент 
+                # в начальный момент
     S = Arr()
 
     LP1 = 0     # количество изломов продольного профиля пути,
@@ -266,7 +266,7 @@ class Train:
     H = None
     H1 = None
     NU = None
-    
+
     PVH = 0 # интегрирование с постоянным шагом
     NP = None
     NP1 = None
@@ -289,7 +289,7 @@ class Train:
     VGR = 0.0013
     HGR = 0.0
 
-    VOT = 1.0 # скорость первого вагона, при которой начинается отпуск
+    VOT = 5.0/3.6 # скорость первого вагона, при которой начинается отпуск
 
     IA = Arr()
     IA1 = Arr()
@@ -490,13 +490,13 @@ class Train:
             cls.A1.set_elem(I, cls.V(J))
             cls.A2.set_elem(I, 0.0)
             I += 1 # label 11
-        
+
         I = cls.N + 2
         cls.Q.set_elem(1, cls.Q(1) - (cls.LB0(1) - cls.LB(1)) * 0.5)
         for J in fortran.DO(1, cls.N):
             cls.A1.set_elem(I, cls.Q(J))
             I += 1 # label 12
-        
+
         print('Начальные условия:')
         print('V:', cls.V)
         print('Q:', cls.Q)
@@ -550,9 +550,9 @@ class Train:
             cls.A5.set_elem(I, cls.A1(I))
             cls.A7.set_elem(I, cls.A4(I))
             cls.A4.set_elem(I, cls.A2(I))
-        
+
         cls.SPRAV1()
-        
+
         for I in fortran.DO(1, cls.NU):
             cls.A1.set_elem(I, cls.A3(I) + (cls.A4(I) + cls.A2(I)) * cls.H1)
 
@@ -619,7 +619,7 @@ class Train:
                 (str(cls.VGR), str(cls.HGR)))
         else:
             print('Интегрирование с постоянным шагом %s' % str(cls.H))
-        
+
         # label 9
         cls.H1 = 0.5 * cls.H
         cls.NU = 2 * cls.N + 1
@@ -741,7 +741,7 @@ class Train:
     #         N1 += cls.NC1
     #         N2 += cls.NC1 # label 50
     #     return TBL_OUT
-    
+
     @classmethod
     def APPARAT1(cls):
         for I in fortran.DO(2, cls.N):
@@ -852,7 +852,7 @@ class Train:
             'DM',
             'абс. деформации соединений, при которых поглощающие аппараты закрываются',
         )
-        
+
         # TODO: допустима ли данная самодеятельность? уточнить
         for I in fortran.DO(1, cls.N0):
             cls.SM.set_elem(I, cls.K(I) * cls.DM(I))
@@ -1071,10 +1071,10 @@ class Train:
             for I in fortran.DO(N12, N13):
                 X = None
                 Z = None
-                
+
                 if cls.P0 > 0 and cls.FT(I) >= 0.0:
                         continue # ~ goto lbl 80
-                
+
                 if cls.T0 is not None:
                     X = cls.T - cls.T0 - cls.TAUOT(I) #@@@ пока так, FIXME
                     # print('I, T-T0-TAUOT(I), P0:', I, X, cls.P0)
@@ -1125,7 +1125,7 @@ class Train:
         # lbl 692
         if cls.M21 == 0:
             return
-        
+
         for I in fortran.DO(1, cls.N0):
             if cls.M1(I) < cls.E or cls.MPT(I) < cls.E:
                 continue
@@ -1211,7 +1211,7 @@ class Train:
                 #---
                 I = 0
                 continue
-        
+
         for I in fortran.DO(1, cls.N0):
             cls.TAU.set_elem(I, TAUOB((I, 1)))
             cls.TAU1.set_elem(I, TAUOB((I, 2)))
@@ -1236,7 +1236,7 @@ class Train:
             cls.K09.set_elem(I, TAUOB((I, 21)))
         for I in fortran.DO(1, cls.N0):
             cls.FT.set_elem(I, 0.0)
-        
+
         # cls.TT = 0.0 #@@@ задаётся в начальных условиях, не надо это делать здесь!
         # cls.T0 = 0.0 #@@@ не надо тормоза отпускать сразу же, как только стартанули!
         # print('~~~~~~~~~ TAUOB:', TAUOB)
@@ -1248,7 +1248,7 @@ class Train:
         for I in fortran.DO(1, cls.N0):
             Y1 = cls.V(I)
             Y = abs(Y1)
-            cls.W.set_elem(I, 
+            cls.W.set_elem(I,
               (
                 cls.W0 / (1.0 + cls.A0 * cls.W0 * Y) +
                 cls.W01 +
@@ -1259,16 +1259,16 @@ class Train:
             cls.W.set_elem(I,
                 -cls.W(I) * cls.M0(I)
             )
-        
+
         if cls.M21 == 0:
             return
-        
+
         for I in fortran.DO(1, cls.N0):
             if cls.M21 < cls.E or cls.MPT(I) <= cls.E:
                 break
             cls.W1.set_elem(I, cls.W(I))
             cls.W.set_elem(I, 0)
-        
+
         return
 
     @classmethod
@@ -1297,7 +1297,7 @@ class Train:
             # TODO: в else дублирующийся код!!!
             if cls.M21 == 0:
                 return
-            
+
             cls.FORMI('MPT') # TODO: что за чепуха?
 
             for I in fortran.DO(1, cls.N0):
@@ -1308,7 +1308,7 @@ class Train:
                     continue
                 cls.W1.set_elem(I, cls.W(I))
                 cls.W.set_elem(I, 0)
-            
+
         else:
             # label 4
             print('Силы основного сопротивления движению зависят от скорости')
@@ -1322,7 +1322,7 @@ class Train:
             # TODO: дублирующийся код!!! (такой же в if)
             if cls.M21 == 0:
                 return
-            
+
             cls.FORMI('MPT') # TODO: объясните-ка!
 
             for I in fortran.DO(1, cls.N0):
@@ -1415,7 +1415,7 @@ class Train:
                 cls.FP.set_elem(I, 0)
             print('Движение по площадке')
             return
-        
+
         # label 19
         print('Движение по пути ломаного профиля')
         cls.inp('P', 'P', 'int', (1, 1000))
@@ -1491,7 +1491,7 @@ class Train:
             cls.S1MAX.set_elem(I, 0.0)
             cls.S10.set_elem(I, 0.0)
             cls.S0.set_elem(I, 0.0)
-        
+
         cls.TP = cls.HP
         cls.TPM = cls.HPM
         cls.TPSM = cls.HPSM
@@ -1563,7 +1563,7 @@ class Train:
         # label 15
         if cls.T <= cls.TPSM:
             return
-        
+
         cls.SMAX1 = cls.SMAX2
         cls.SO1 = cls.SO2
         cls.NL10 = cls.NL17
@@ -1591,7 +1591,7 @@ class Train:
             cls.S1MAX.set_elem(I, 0.0)
             cls.S10.set_elem(I, 0.0)
             cls.S0.set_elem(I, 0.0)
-    
+
     @classmethod
     def PRINTR1(cls):
         # label 4
@@ -1629,7 +1629,7 @@ class Train:
         ret |= cls.V(1) <= cls.VK
         ret |= abs(cls.X(1)) >= cls.XK
         return ret
-    
+
     @classmethod
     def debug(cls):
         # print('>>> Ax:')
@@ -1676,9 +1676,9 @@ if __name__ == '__main__':
         # data for plotting and debugging
         if step % 100 == 0 or step == 1 or Train.limits_reached():
             t_to_show.append(Train.T)
-            f_label = 'скорость [м/с]'
+            f_label = 'скорость [км/ч] от времени [с]'
             # f_to_show.append(Train.X(1))
-            f_to_show.append(Train.A1(2)) # speed of the 1st coach
+            f_to_show.append(Train.A1(2)*3.6) # speed of the 1st coach
             # f_to_show.append(Train.Z1)
 
             Train.debug()
