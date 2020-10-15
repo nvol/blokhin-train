@@ -13,7 +13,10 @@ TAU_T1 = 0.2 # время бега тормозной волны до перво
 TAU_TN = TAU_T1 + 0.4 * N # время бега тормозной волны до N-ного экипажа
 Fbrk1, FbrkN = 13.8, 13.8 # максимальные силы нажатия на колодки в первом и последнем срезе
 
-initial_dataset = {
+class GlobalDataset:
+    initial_dataset = None
+
+initial_dataset1 = {
     'N0': N,        # количество экипажей (вагонов)
     'M0': [         # массы экипажей, т? (TODO)
         18.8,
@@ -87,14 +90,14 @@ initial_dataset = {
 
     'V': [60.0/3.6, ],    # скорости движения экипажей
 
-    'LP1': 1,   # 0 - профиль пути без изломов, 1 - с изломами
+    'LP1': 0,   # 0 - профиль пути без изломов, 1 - с изломами
     'P': 4,     # количество участков для профиля пути
     'DI': [0.0,
-            0.0, 0.15, -0.15, 0.0], # P+1 элемент (TODO: а почему так?)
+            0.0, +0.15, -0.15, 0.0], # P+1 элемент
     'LP': [
-            20.0, 50.0, 50.0, 500.0],
+            10.0, 100.0, 100.0, 500.0],
     'R': [
-            1.0, 1000.0, 1000.0, 3000.0],
+            1.0, 1.0, 1.0, 1.0],
 
     'W0': 0.6,
     'A0': 0.5,
@@ -121,6 +124,18 @@ initial_dataset = {
     'NFP2': 6,
     'NVOZ': 1,
 }
+
+initial_dataset2 = deepcopy(initial_dataset1)
+initial_dataset2['LP1'] = 1
+initial_dataset2['P'] = 4
+initial_dataset2['DI'] = [0.0,
+            0.0, +0.15, -0.15, 0.0] # P+1 элемент
+
+initial_dataset3 = deepcopy(initial_dataset1)
+initial_dataset3['LP1'] = 1
+initial_dataset3['P'] = 4
+initial_dataset3['DI'] = [0.0,
+            0.0, -0.15, +0.15, 0.0] # P+1 элемент
 
 # main constants
 
@@ -425,8 +440,8 @@ class Train:
                     cls.__name__, var_name,
                 )))
         # try to get value from initials
-        if var_name in initial_dataset:
-            setattr(cls, var_name, initial_dataset[var_name])
+        if var_name in GlobalDataset.initial_dataset:
+            setattr(cls, var_name, GlobalDataset.initial_dataset[var_name])
             print(
                 'Присвоено значение:',
                 var_name, '=', getattr(cls, var_name),
@@ -668,8 +683,8 @@ class Train:
                     cls.__name__, arr_name,
                 )))
         # try to get list object from initials
-        if arr_name in initial_dataset:
-            lst = initial_dataset[arr_name]
+        if arr_name in GlobalDataset.initial_dataset:
+            lst = GlobalDataset.initial_dataset[arr_name]
             if type(lst) is not list:
                 raise(ValueError('initial value %s must be the list object' % (
                     arr_name,
@@ -1651,7 +1666,8 @@ class Train:
         print(' T:', cls.T, ' X:', cls.X, ' V:', cls.V, ' FB:', cls.FB)
 
 
-if __name__ == '__main__':
+def run_experiment(dataset):
+    GlobalDataset.initial_dataset = deepcopy(dataset)
 
     Train.PARVAG1()
     Train.PARS()
@@ -1707,8 +1723,20 @@ if __name__ == '__main__':
         Train.VUMAX()
 
     if PLOT_OUT:
+        plt.plot(t_to_show, f_to_show, label=f_label)
+
+
+if __name__ == '__main__':
+    if PLOT_OUT:
         plt.style.use('fivethirtyeight')
-        plt.plot(t_to_show, f_to_show, 'r', label=f_label)
+
+    run_experiment(initial_dataset1)
+
+    run_experiment(initial_dataset2)
+
+    run_experiment(initial_dataset3)
+
+    if PLOT_OUT:
         plt.legend()
         plt.show()
-        # exit(0)
+
