@@ -11,7 +11,7 @@ PLOT_OUT = not False
 N = 6
 TAU_T1 = 0.2 # время бега тормозной волны до первого экипажа
 TAU_TN = TAU_T1 + 0.4 * N # время бега тормозной волны до N-ного экипажа
-Fbrk1, FbrkN = 13.8, 13.8 # максимальные силы нажатия на колодки в первом и последнем срезе
+Fbrk1, FbrkN = 8.5, 8.5 # максимальные силы нажатия на колодки в первом и последнем срезе
 
 class GlobalDataset:
     initial_dataset = None
@@ -57,17 +57,16 @@ initial_dataset1 = {
         0.077,      # при которых поглощающие аппараты закрываются
     ],              # (исчерпывают свой ход)
 
-    'VOT': 1.5,      # скорость, при которой начинается отпуск тормозов
+    'VOT': 0.5,      # скорость, при которой начинается отпуск тормозов
     'C1': 0.055,
     'C2': 20.0,
     'C3': 5.0,
     'C4': 41.7,
     'C5': 20.85,
 
-    'CK': [4, ],    # количество колодок на каждом экипаже
-
     'NTAU': 2,      # число сечений в поезде для задания
                     # параметров тормозных сил
+    'CK': [16, 16],  # количество колодок на каждом срезе (?) TODO
     'ITAU': [1, N], # номера экипажей, где находятся вышеупомянутые сечения
     'YTAU': [
         [
@@ -91,13 +90,13 @@ initial_dataset1 = {
     'V': [60.0/3.6, ],    # скорости движения экипажей
 
     'LP1': 0,   # 0 - профиль пути без изломов, 1 - с изломами
-    'P': 4,     # количество участков для профиля пути
+    'P': 1,     # количество участков для профиля пути
     'DI': [0.0,
-            0.0, +0.15, -0.15, 0.0], # P+1 элемент
+            0.0], # уклоны (P+1 элемент)
     'LP': [
-            10.0, 100.0, 100.0, 500.0],
+            0.0], # длины участков
     'R': [
-            1.0, 1.0, 1.0, 1.0],
+            1.0], # радиусы скругления
 
     'W0': 0.6,
     'A0': 0.5,
@@ -127,15 +126,19 @@ initial_dataset1 = {
 
 initial_dataset2 = deepcopy(initial_dataset1)
 initial_dataset2['LP1'] = 1
-initial_dataset2['P'] = 4
+initial_dataset2['P'] = 2
 initial_dataset2['DI'] = [0.0,
-            0.0, +0.15, -0.15, 0.0] # P+1 элемент
+            +0.15] # спуск (где-то через 200 метров)
+initial_dataset2['LP'] = [5, 10000.0]
+initial_dataset2['R'] = [1.0, 20000.0]
 
 initial_dataset3 = deepcopy(initial_dataset1)
 initial_dataset3['LP1'] = 1
-initial_dataset3['P'] = 4
+initial_dataset3['P'] = 2
 initial_dataset3['DI'] = [0.0,
-            0.0, -0.15, +0.15, 0.0] # P+1 элемент
+            -0.15] # подъём (где-то через 200 метров)
+initial_dataset3['LP'] = [5, 10000.0]
+initial_dataset3['R'] = [1.0, 20000.0]
 
 # main constants
 
@@ -244,9 +247,10 @@ class Arr:
 
 
 class Train:
-    N = 1   # n - число экипажей или групп (для укороченной системы)
     N0 = 1  # число экипажей всего
     NC1 = 1 # число экипажей в группе (величина постоянная!)
+    N = 1   # n - число групп (для укороченной системы)
+            # для неукороченной системы N = N0, NC1 = 1
 
     X = Arr()   # координаты экипажей
     V = Arr()   # скорости экипажей
@@ -1693,16 +1697,13 @@ def run_experiment(dataset):
 
     step = 0
     while True:
-        step += 1
-        # ---
-
         Train.INTEGR()
         Train.MAX()
         if Train.T >= Train.TP and PRINT_OUT:
             Train.PRINTR1()
 
         # data for plotting and debugging
-        if step % 100 == 0 or step == 1 or Train.limits_reached():
+        if step % 1000 == 0 or Train.limits_reached():
             t_to_show.append(Train.T)
             f_label = 'скорость [км/ч] от времени [с]'
             # f_to_show.append(Train.X(1))
@@ -1716,6 +1717,8 @@ def run_experiment(dataset):
 
             if Train.limits_reached():
                 break
+        # ---
+        step += 1
 
     print('total steps:', step)
 
